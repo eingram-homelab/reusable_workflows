@@ -1,15 +1,22 @@
 name: Packer Validation
 
 on:
-  pull_request:
-    branches: [ main ]
-    # paths:
-    #   - '**.pkr.hcl'
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Repository containing Packer templates'
+        type: string
+        default: 'eingram-homelab/packer'
+      ref:
+        description: 'Branch or ref to check out'
+        type: string
+        default: 'main'
+    # secrets:
+    #   VAULT_TOKEN:
+    #     required: false
 
 jobs:
   validate:
-    outputs:
-      TMPL_NAME: ${{ steps.set_TMPL_NAME.outputs.TMPL_NAME }}
     name: Validate Packer Templates
     runs-on: arc-runners
     # env:
@@ -19,8 +26,8 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v6.0.2
       with:
-        repository: eingram-homelab/packer
-        ref: main
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
 
     - name: Get changed files
       id: changed-files
