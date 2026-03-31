@@ -11,6 +11,9 @@ on:
         description: 'Branch or ref to check out'
         type: string
         default: ''
+    secrets:
+      VAULT_TOKEN:
+        required: true
 
 jobs:
   validate:
