@@ -1,0 +1,142 @@
+name: Validate Terraform
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Repository containing Terraform code to lint'
+        type: string
+        default: ''
+      ref:
+        description: 'Branch or ref to check out. Defaults to the PR head branch.'
+        type: string
+        default: ''
+
+jobs:
+  validate:
+    name: Validate Terraform Project
+    runs-on: arc-runners
+    outputs:
+      project_name: ${{ steps.collect-artifacts.outputs.project_name }}
+      project_type: ${{ steps.check-projects.outputs.project_type }}
+      ansible_limit: ${{ steps.collect-artifacts.outputs.ansible_limit }}
+      ansible_user: ${{ steps.collect-artifacts.outputs.ansible_user }}
+      cluster_name: ${{ steps.collect-artifacts.outputs.cluster_name }}
+      cluster_lb_ip: ${{ steps.collect-artifacts.outputs.cluster_lb_ip }}
+      deploy_tag: ${{ steps.tag-deployment.outputs.tag }}
+    env:
+      VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+      GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+
+      - name: Get changed files
+        id: changed-files
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        uses: tj-actions/changed-files@v46.0.5
+        with:
+          files: |
+            projects/**/**/main.tf
+
+      - name: Ensure only one project is changed
+        id: check-projects
+        run: |
+          if [ "$CHANGED_FILES" != "" ]; then
+            echo "Changed files: $CHANGED_FILES"
+            projects=$(echo "$CHANGED_FILES" | grep -oE '.+\/')
+            echo ${projects[@]}
+            unique_project=$(echo "$projects" | sort -u)
+            echo $unique_project
+            type=$(echo "$unique_project" | cut -d'/' -f2)
+            echo "Project type: $type"
+
+
+            #################
+            # CREATE OUTPUT #
+            #################
+            echo project_type=$type >> $GITHUB_OUTPUT
+
+            if [ $(echo "$unique_project" | wc -l) -gt 1 ]; then
+              echo "Error: More than one project changed. Please limit changes to one project at a time."
+              exit 1
+            fi
+
+            #################
+            # CREATE OUTPUT #
+            #################
+            echo "project=$unique_project" >> $GITHUB_OUTPUT
+
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.11.3
+
+      - name: Create json cred file
+        id: create-cred-file
+        env:
+          GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
+        run: |
+          echo $GCP_STORAGE | base64 --decode > /tmp/cred.json
+
+      - name: Generate backend configuration
+        id: generate-backend
+        env:
+          PROJECT: ${{ steps.check-projects.outputs.project }}
+        run: |
+          dir=$PROJECT
+          sudo rm -f "$dir/backend.tf"
+          echo "Generated backend.tf for $dir"
+          cat > "$dir/backend.tf" <<EOF
+          terraform {
+            backend "gcs" {
+              bucket      = "yc-srv1-tfstate"
+              credentials = "/tmp/cred.json"
+              prefix      = "terraform/state/$(echo "$dir" | cut -d'/' -f3)"
+            }
+          }
+          EOF
+
+      - name: Run terraform init
+        env:
+          PROJECT: ${{ steps.check-projects.outputs.project }}
+        run: |
+          dir=$PROJECT
+          echo "Running terraform init for $dir"
+          cd "$dir"
+          terraform init
+
+      - name: Run terraform validate
+        env:
+          PROJECT: ${{ steps.check-projects.outputs.project }}
+        run: |
+          dir=$PROJECT
+          echo "Running terraform validate for $dir"
+          cd "$dir"
+          terraform validate
+
+      - name: Delete json cred file
+        if: always()
+        run: |
+          if [ -f /tmp/cred.json ]; then
+            rm -f /tmp/cred.json
+          fi
+      
+      - name: Delete terraform backend config
+        if: always()
+        env:
+          PROJECT: ${{ steps.check-projects.outputs.project }}
+        run: |
+          dir=$PROJECT
+          sudo rm -f "$dir/backend.tf"

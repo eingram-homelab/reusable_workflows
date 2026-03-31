@@ -44,8 +44,10 @@ jobs:
           terraform_version: 1.11.3
 
       - name: Create json cred file
+        env:
+          GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
         run: |
-          echo ${{ secrets.GCP_STORAGE }} | base64 --decode > /tmp/cred.json
+          echo $GCP_STORAGE | base64 --decode > /tmp/cred.json
 
       - name: Run terraform init
         run: |

@@ -13,11 +13,11 @@ on:
 
 jobs:
   tflint:
-    runs-on: ${{ matrix.os }}
+    runs-on: arc-runners
 
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
+    # strategy:
+    #   matrix:
+    #     os: [ubuntu-latest]
 
     steps:
     - uses: actions/checkout@v6.0.2
@@ -25,8 +25,8 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Get changed files
-      id: changed-files
+    - name: Get changed dirs
+      id: changed-dirs
       uses: tj-actions/changed-files@v46
       with:
         files: |
@@ -51,7 +51,9 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
 
     - name: Run TFLint
+      env:
+        CHANGED_DIRS: ${{ steps.changed-dirs.outputs.all_changed_files }}
       run: |
-        for dir in ${{ steps.changed-files.outputs.all_changed_files }}; do
+        for dir in $CHANGED_DIRS; do
           tflint --chdir="$dir"
         done
