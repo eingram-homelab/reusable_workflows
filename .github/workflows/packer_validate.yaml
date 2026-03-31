@@ -6,11 +6,11 @@ on:
       repository:
         description: 'Repository containing Packer templates'
         type: string
-        default: 'eingram-homelab/packer'
+        default: ''
       ref:
         description: 'Branch or ref to check out'
         type: string
-        default: 'main'
+        default: ''
 
 jobs:
   validate:
@@ -21,7 +21,7 @@ jobs:
       uses: actions/checkout@v6.0.2
       with:
         repository: ${{ inputs.repository }}
-        ref: ${{ inputs.ref }}
+        ref: ${{ inputs.ref || github.head_ref }}
 
     - name: Get changed files
       id: changed-files
