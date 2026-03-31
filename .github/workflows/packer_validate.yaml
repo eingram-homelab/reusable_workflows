@@ -19,9 +19,6 @@ jobs:
   validate:
     name: Validate Packer Templates
     runs-on: arc-runners
-    env:
-      VAULT_ADDR: ${{ vars.VAULT_ADDR }}
-      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
     steps:
     - name: Checkout Code
       uses: actions/checkout@v6.0.2
@@ -44,6 +41,8 @@ jobs:
       if: steps.changed-files.outputs.all_changed_files != ''
       env:
         CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+        VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
       run: |
         dirs=$(for file in $CHANGED_FILES; do dirname "$file"; done | sort -u)
         for dir in $dirs; do
