@@ -1,3 +1,4 @@
+---
 name: Run Ansible new_build playbook
 
 on:

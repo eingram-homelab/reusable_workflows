@@ -1,3 +1,4 @@
+---
 name: Validate Terraform
 on:
   workflow_call:
