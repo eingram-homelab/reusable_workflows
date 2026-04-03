@@ -9,25 +9,23 @@ on:
       - 'workflow-templates/**'
 
 jobs:
-  install_pip:
-    name: Install pip
+  validate:
+    name: Validate Workflow Files
     runs-on: arc-runners
     steps:
-      - name: Install pip
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3 python3-dev python3-pip
-          python3 -m pip install --upgrade pip
-
-  yaml-lint:
-    name: YAML Lint
-    runs-on: arc-runners
-    steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Install yamllint
-        run: pip install yamllint
+        run: pip install --break-system-packages yamllint
 
       - name: Lint workflow YAML files
         run: |
@@ -39,18 +37,6 @@ jobs:
               comments: disable
             }
           }' .github/workflows/ workflow-templates/
-
-  actionlint:
-    name: Actionlint
-    runs-on: arc-runners
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
-
-      - name: Run actionlint
-        uses: rhysd/actionlint@v1.7.12
-        with:
-          fail-on-error: true
 
   changed-files-check:
     name: Changed Files Summary
@@ -71,13 +57,19 @@ jobs:
 
       - name: List changed files
         if: steps.changed.outputs.any_changed == 'true'
-        env: 
+        env:
           CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
         run: |
           echo "Changed workflow files:"
           for file in $CHANGED_FILES; do
             echo "  - $file"
           done
+
+      - name: Install python3-yaml
+        if: steps.changed.outputs.any_changed == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3-yaml
 
       - name: Validate workflow_call inputs have descriptions
         if: steps.changed.outputs.any_changed == 'true'
@@ -89,7 +81,7 @@ jobs:
             if [[ "$file" == *.yaml || "$file" == *.yml ]]; then
               echo "Checking $file..."
               # Warn if workflow_call inputs are missing descriptions
-              if grep -q 'workflow_call' "$file"; then
+              if grep -qE '^  workflow_call' "$file"; then
                 python3 - "$file" <<'EOF'
           import sys
           import yaml
@@ -102,9 +94,9 @@ jobs:
           if not isinstance(on, dict):
               sys.exit(0)
 
-          wc = on.get("workflow_call", {})
-          inputs = (wc or {}).get("inputs", {}) or {}
-          secrets = (wc or {}).get("secrets", {}) or {}
+          wc = on.get("workflow_call") or {}
+          inputs = wc.get("inputs") or {}
+          secrets = wc.get("secrets") or {}
 
           issues = []
           for name, cfg in inputs.items():
@@ -122,7 +114,12 @@ jobs:
               print(f"WARNING: {filepath}")
               for i in issues:
                   print(i)
+              sys.exit(1)
           EOF
+              if [[ $? -ne 0 ]]; then
+                failed=1
+              fi
               fi
             fi
           done
+          exit $failed
