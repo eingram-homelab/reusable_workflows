@@ -1,13 +1,23 @@
 ---
-name: Terraform Validate New Template
+name: Terraform Validate New vSphere Template
 
 on:
   workflow_call:
     inputs:
       TMPL_NAME:
-        description: 'The VSphere template name'
+        description: 'The vSphere template name to verify'
         required: true
         type: string
+      terraform_version:
+        description: 'Terraform version to use'
+        required: false
+        type: string
+        default: '1.11.3'
+      runner:
+        description: 'Runner to use for the job'
+        required: false
+        type: string
+        default: 'arc-runners'
     secrets:
       VAULT_TOKEN:
         description: 'Vault token with permissions to access secrets needed for validation'
@@ -18,8 +28,8 @@ on:
 
 jobs:
   validate_and_apply:
-    name: Validate Packer Templates on vSphere using Terraform
-    runs-on: arc-runners
+    name: Validate Packer Template on vSphere using Terraform
+    runs-on: ${{ inputs.runner }}
     env:
       TF_VAR_vsphere_template: "${{ inputs.TMPL_NAME }}"
       TF_VAR_vm_name_list: '["gha-vm-test"]'
@@ -34,23 +44,19 @@ jobs:
           repository: eingram-homelab/terraform
           ref: main
 
-      # When running on self-hosted GitHub Actions runners,
-      # NodeJS must be previously installed with the version specified in the action.yml.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@main
         with:
-          terraform_version: 1.11.3
+          terraform_version: ${{ inputs.terraform_version }}
 
-      - name: Create json cred file
-        env:
-          GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
+      - name: Create GCS credentials file
         run: |
-          echo $GCP_STORAGE | base64 --decode > /tmp/cred.json
+          echo ${{ secrets.GCP_STORAGE }} | base64 --decode > /tmp/cred.json
 
       - name: Run terraform init
         run: |

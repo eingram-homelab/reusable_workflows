@@ -1,0 +1,19 @@
+name: Build Ansible Execution Environment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'execution-environments/amd64/**/VERSION'
+
+jobs:
+  build:
+    name: Build Ansible EE
+    uses: eingram-homelab/.github/.github/workflows/build-ansible-ee.yaml@main
+    with:
+      ee_dir: 'execution-environments/amd64/YOUR_EE_NAME'
+      ee_name: 'YOUR_EE_NAME'
+      ee_version: '1.0.0'
+    secrets:
+      REGISTRY_PASSWORD: ${{ secrets.GITEA_PASSWORD }}

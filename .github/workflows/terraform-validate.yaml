@@ -1,3 +1,4 @@
+---
 name: Validate Terraform
 on:
   workflow_call:
@@ -132,7 +133,7 @@ jobs:
           if [ -f /tmp/cred.json ]; then
             rm -f /tmp/cred.json
           fi
-      
+
       - name: Delete terraform backend config
         if: always()
         env:

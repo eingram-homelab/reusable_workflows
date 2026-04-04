@@ -1,0 +1,6 @@
+{
+  "name": "Build Ansible Execution Environment",
+  "description": "Build and push an Ansible Execution Environment container image using the org-wide reusable workflow.",
+  "iconName": "octicon package",
+  "categories": ["Ansible", "Docker"]
+}

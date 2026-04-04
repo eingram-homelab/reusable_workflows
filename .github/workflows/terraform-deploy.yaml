@@ -1,0 +1,97 @@
+---
+name: Terraform Deploy Project
+
+on:
+  workflow_call:
+    inputs:
+      project_dir:
+        description: 'Path to the Terraform project directory (e.g. projects/vsphere/my-project/)'
+        required: true
+        type: string
+      terraform_version:
+        description: 'Terraform version to use'
+        required: false
+        type: string
+        default: '1.11.3'
+      runner:
+        description: 'Runner to use for the job'
+        required: false
+        type: string
+        default: 'arc-runners'
+      gcs_bucket:
+        description: 'GCS bucket name for Terraform state backend'
+        required: false
+        type: string
+        default: 'yc-srv1-tfstate'
+    secrets:
+      VAULT_TOKEN:
+        description: 'Vault token with permissions to access secrets needed for deployment'
+        required: true
+      GCP_STORAGE:
+        description: 'Base64-encoded GCP service account key for accessing the GCS bucket'
+        required: true
+
+jobs:
+  deploy:
+    name: Terraform Deploy
+    runs-on: ${{ inputs.runner }}
+    env:
+      VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+      GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@main
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+
+      - name: Create GCS credentials file
+        run: |
+          echo ${{ secrets.GCP_STORAGE }} | base64 --decode > /tmp/cred.json
+
+      - name: Generate backend configuration
+        run: |
+          dir="${{ inputs.project_dir }}"
+          sudo rm -f "$dir/backend.tf"
+          state_prefix=$(echo "$dir" | sed 's:/*$::' | xargs basename)
+          cat > "$dir/backend.tf" <<EOF
+          terraform {
+            backend "gcs" {
+              bucket      = "${{ inputs.gcs_bucket }}"
+              credentials = "/tmp/cred.json"
+              prefix      = "terraform/state/${state_prefix}"
+            }
+          }
+          EOF
+
+      - name: Check terraform fmt
+        run: |
+          echo "Running terraform fmt check for ${{ inputs.project_dir }}"
+          cd "${{ inputs.project_dir }}"
+          terraform fmt -check
+
+      - name: Run terraform init
+        run: |
+          echo "Running terraform init for ${{ inputs.project_dir }}"
+          cd "${{ inputs.project_dir }}"
+          terraform init
+
+      - name: Run terraform validate
+        run: |
+          echo "Running terraform validate for ${{ inputs.project_dir }}"
+          cd "${{ inputs.project_dir }}"
+          terraform validate
+
+      - name: Run terraform apply
+        run: |
+          echo "Running terraform apply for ${{ inputs.project_dir }}"
+          cd "${{ inputs.project_dir }}"
+          terraform apply --auto-approve

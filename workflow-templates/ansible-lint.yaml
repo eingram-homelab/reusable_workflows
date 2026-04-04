@@ -1,0 +1,11 @@
+name: Ansible Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Ansible Lint
+    uses: eingram-homelab/.github/.github/workflows/ansible-lint.yaml@main

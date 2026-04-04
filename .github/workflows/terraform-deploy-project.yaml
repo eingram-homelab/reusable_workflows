@@ -1,3 +1,4 @@
+---
 name: Deploy terraform project
 
 on:
@@ -133,7 +134,7 @@ jobs:
           if [ -f /tmp/cred.json ]; then
             rm -f /tmp/cred.json
           fi
-      
+
       - name: Delete terraform backend config
         if: always()
         env:
@@ -192,7 +193,7 @@ jobs:
 
             # Initialize empty array
             declare -a name_list=()
-            
+
             # Check if output exists
             if terraform output -json domain &>/dev/null; then
               domain=$(terraform output -json domain | jq -r '. // empty')
@@ -200,7 +201,7 @@ jobs:
                 echo "Warning: Domain output is empty or null"
                 exit 1
               fi
-              
+
               if terraform output -json name &>/dev/null; then
                 names=$(terraform output -json name | jq -r '.')
                 while IFS= read -r item; do
@@ -210,12 +211,12 @@ jobs:
                   echo "Warning: No names found in output"
                   exit 1
                 fi
-                
+
                 for i in "${!name_list[@]}"; do
                   name_list[$i]=$(echo "${name_list[$i]}" | tr -d '"')
                   name_list[$i]="${name_list[$i]}"."$domain"
                 done
-                
+
                 ansible_hosts=$(IFS=,; echo "${name_list[*]}")
 
                 #################
@@ -236,7 +237,8 @@ jobs:
             # Install HashiCorp Vault
             sudo apt update && sudo apt install -y ca-certificates wget
             wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+              https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
             sudo apt update && sudo apt install -y vault
             sudo setcap -r /usr/bin/vault
 
@@ -249,7 +251,7 @@ jobs:
             echo project_name=$(basename $dir) >> $GITHUB_OUTPUT
 
             cd "$dir"
-            
+
             # Check if output exists
             echo "Getting cluster name"
             if terraform output -json cluster_name &>/dev/null; then
@@ -276,7 +278,7 @@ jobs:
               echo "Error: 'cluster_kube_config' output not found"
               exit 1
             fi
-            
+
             # Check if cluster_rke_config output exists
             echo "Getting cluster load balancer IP"
             if terraform output -json cluster_rke_config &>/dev/null; then
@@ -412,14 +414,14 @@ jobs:
           echo "Running terraform destroy for $dir"
           cd "$dir"
           terraform destroy --auto-approve
-      
+
       - name: Delete json cred file
         if: always()
         run: |
           if [ -f /tmp/cred.json ]; then
             rm -f /tmp/cred.json
           fi
-      
+
       - name: Delete terraform backend config
         if: always()
         env:

@@ -1,0 +1,6 @@
+{
+  "name": "Ansible Lint",
+  "description": "Lints Ansible code on pull requests to main using the org-wide reusable workflow.",
+  "iconName": "octicon checklist",
+  "categories": ["Ansible", "Lint"]
+}

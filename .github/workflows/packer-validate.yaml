@@ -1,3 +1,4 @@
+---
 name: Packer Validation
 
 on:
@@ -13,6 +14,7 @@ on:
         default: ''
     secrets:
       VAULT_TOKEN:
+        description: 'Vault token with permissions to access secrets needed for validation'
         required: true
 
 jobs:
@@ -20,34 +22,34 @@ jobs:
     name: Validate Packer Templates
     runs-on: arc-runners
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v6.0.2
-      with:
-        repository: ${{ inputs.repository }}
-        ref: ${{ inputs.ref || github.head_ref }}
+      - name: Checkout Code
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref || github.head_ref }}
 
-    - name: Get changed files
-      id: changed-files
-      uses: tj-actions/changed-files@v46.0.5
-      with:
-        files: |
-          **/*.pkr.hcl
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v46.0.5
+        with:
+          files: |
+            **/*.pkr.hcl
 
-    - name: Setup Packer
-      if: steps.changed-files.outputs.all_changed_files != ''
-      uses: hashicorp/setup-packer@v3.2.0
+      - name: Setup Packer
+        if: steps.changed-files.outputs.all_changed_files != ''
+        uses: hashicorp/setup-packer@v3.2.0
 
-    - name: Validate changed Packer templates
-      if: steps.changed-files.outputs.all_changed_files != ''
-      env:
-        CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        VAULT_ADDR: ${{ vars.VAULT_ADDR }}
-        VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
-      run: |
-        dirs=$(for file in $CHANGED_FILES; do dirname "$file"; done | sort -u)
-        for dir in $dirs; do
-          echo "=== Processing $dir ==="
-          packer fmt -check "$dir"
-          packer init "$dir"
-          packer validate "$dir"
-        done
+      - name: Validate changed Packer templates
+        if: steps.changed-files.outputs.all_changed_files != ''
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+        run: |
+          dirs=$(for file in $CHANGED_FILES; do dirname "$file"; done | sort -u)
+          for dir in $dirs; do
+            echo "=== Processing $dir ==="
+            packer fmt -check "$dir"
+            packer init "$dir"
+            packer validate "$dir"
+          done

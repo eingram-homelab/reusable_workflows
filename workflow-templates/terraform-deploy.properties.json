@@ -1,0 +1,7 @@
+{
+  "name": "Terraform Deploy",
+  "description": "Deploy a Terraform project on push to main using the org-wide reusable workflow.",
+  "iconName": "octicon rocket",
+
+  "categories": ["Terraform", "Deploy"]
+}

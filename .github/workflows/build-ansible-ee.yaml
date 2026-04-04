@@ -1,0 +1,88 @@
+---
+name: Build Ansible Execution Environment
+
+on:
+  workflow_call:
+    inputs:
+      ee_dir:
+        description: 'Path to the execution environment directory containing the EE definition'
+        required: true
+        type: string
+      ee_name:
+        description: 'Name for the execution environment image'
+        required: true
+        type: string
+      ee_version:
+        description: 'Version tag for the execution environment image'
+        required: true
+        type: string
+      registry:
+        description: 'Container registry to push the image to (e.g. gitea.local.lan)'
+        required: false
+        type: string
+        default: 'gitea.local.lan'
+      registry_user:
+        description: 'Username for the container registry'
+        required: false
+        type: string
+        default: 'eingram'
+      runner:
+        description: 'Runner to use for the job'
+        required: false
+        type: string
+        default: 'self-hosted'
+    secrets:
+      REGISTRY_PASSWORD:
+        description: 'Password for the container registry'
+        required: true
+
+jobs:
+  build:
+    name: Build and Push Ansible EE
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install ansible-builder
+        run: |
+          sudo apt-get update
+          pip install --upgrade pip
+          pip install ansible-dev-tools
+
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl
+          sudo install -m 0755 -d /etc/apt/keyrings
+          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+          sudo chmod a+r /etc/apt/keyrings/docker.asc
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+            $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+      - name: Build Ansible Execution Environment
+        run: |
+          echo "Building execution environment ${{ inputs.ee_name }}:${{ inputs.ee_version }}"
+          cd ${{ inputs.ee_dir }}
+          sudo service docker start
+          ansible-builder build \
+            --container-runtime docker \
+            --tag "${{ inputs.ee_name }}:${{ inputs.ee_version }}" \
+            --verbosity 3
+
+      - name: Tag and push EE image to registry
+        run: |
+          echo "Tagging and pushing ${{ inputs.ee_name }}:${{ inputs.ee_version }} to ${{ inputs.registry }}"
+          docker login -u ${{ inputs.registry_user }} -p ${{ secrets.REGISTRY_PASSWORD }} ${{ inputs.registry }}
+          docker tag "${{ inputs.ee_name }}:${{ inputs.ee_version }}" "${{ inputs.registry }}/${{ inputs.registry_user }}/${{ inputs.ee_name }}:${{ inputs.ee_version }}"
+          docker push "${{ inputs.registry }}/${{ inputs.registry_user }}/${{ inputs.ee_name }}:${{ inputs.ee_version }}"

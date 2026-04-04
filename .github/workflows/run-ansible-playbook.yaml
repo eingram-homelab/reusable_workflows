@@ -1,29 +1,44 @@
 ---
-name: Run Ansible new_build playbook
+name: Run Ansible Playbook
 
 on:
   workflow_call:
     inputs:
       limit:
-        description: 'Ansible limit for the playbook run'
-        required: true
+        description: 'Ansible limit for the playbook run (e.g. -l host1,host2)'
+        required: false
         type: string
+        default: ''
       playbook:
-        description: 'Playbook to run'
+        description: 'Playbook filename to run (relative to the playbooks/ directory)'
         required: true
         type: string
       extra_vars:
-        description: 'Extra variables for the playbook run'
+        description: 'Extra variables for the playbook run (space-separated key=value pairs)'
         required: false
         type: string
+        default: ''
       ansible_user:
-        description: 'Ansible user for the playbook run'
+        description: 'SSH user for Ansible to connect with'
         required: true
         type: string
+      runner:
+        description: 'Runner to use for the job'
+        required: false
+        type: string
+        default: 'arc-runners'
+    secrets:
+      VAULT_TOKEN:
+        description: 'Vault token for accessing secrets during the playbook run'
+        required: true
+      ANSIBLE_SSH_KEY:
+        description: 'SSH private key for Ansible to connect to hosts (base64-encoded)'
+        required: true
 
 jobs:
-  run_new_build_playbook:
-    runs-on: arc-runners
+  run_playbook:
+    name: Run Ansible Playbook
+    runs-on: ${{ inputs.runner }}
     env:
       VAULT_ADDR: ${{ vars.VAULT_ADDR }}
       VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
@@ -42,26 +57,23 @@ jobs:
           ref: main
           path: ansible-etc
 
-      # - name: Setup Python
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.12'
-
       - name: Install Ansible and supporting packages
         run: |
-          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+          curl https://baltocdn.com/helm/signing.asc | gpg --dearmor |
+            sudo tee /usr/share/keyrings/helm.gpg > /dev/null
           sudo apt-get install -y apt-transport-https
           HELM_REPO="deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg]"
-          echo "$HELM_REPO https://baltocdn.com/helm/stable/debian/ all main" \
-            | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-          curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+          echo "$HELM_REPO https://baltocdn.com/helm/stable/debian/ all main" |
+            sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+          curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key |
+            sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
           sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-          echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
-            https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' \
-            | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' |
+            sudo tee /etc/apt/sources.list.d/kubernetes.list
           sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
           sudo apt-get update
-          sudo apt-get install -y python3 python3-dev python3-pip helm kubectl gcc krb5-config libkrb5-dev apt-transport-https ca-certificates curl gnupg
+          sudo apt-get install -y python3 python3-dev python3-pip helm kubectl gcc krb5-config libkrb5-dev \
+            apt-transport-https ca-certificates curl gnupg
           python3 -m pip install --upgrade pip
           sudo pip install ansible-core==2.17.11
           sudo pip install -r ansible-etc/requirements.txt
@@ -84,4 +96,5 @@ jobs:
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
           export K8S_AUTH_KUBECONFIG=~/.kube/config
-          ansible-playbook -i ansible-etc/inventory -e "${{ inputs.extra_vars }}" ${{ inputs.limit }} --key-file "~/id_rsa" playbooks/${{ inputs.playbook }}
+          ansible-playbook -i ansible-etc/inventory -e "${{ inputs.extra_vars }}" ${{ inputs.limit }} \
+            --key-file "~/id_rsa" playbooks/${{ inputs.playbook }}
