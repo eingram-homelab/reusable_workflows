@@ -32,8 +32,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.repository }}
-          ref: ${{ inputs.ref }}
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.ref || github.head_ref }}
 
       - name: Get changed files
         id: changed-files
