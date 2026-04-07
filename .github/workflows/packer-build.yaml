@@ -1,0 +1,124 @@
+---
+name: Packer Build
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Repository containing Packer templates'
+        type: string
+        default: ''
+      ref:
+        description: 'Branch or ref to check out'
+        type: string
+        default: ''
+    secrets:
+      VAULT_TOKEN:
+        description: 'Vault token with permissions to access secrets needed for build'
+        required: true
+
+jobs:
+  build:
+    outputs:
+      TMPL_NAME: ${{ steps.set_TMPL_NAME.outputs.TMPL_NAME }}
+    name: Build Packer Templates
+    runs-on: arc-runners
+    env:
+      VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.ref || github.head_ref }}
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "latest"
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v46.0.5
+        with:
+          files: |
+            **/*.pkr.hcl
+
+      - name: Run packer init
+        run: |
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            dir=$(dirname "$file")
+            echo "Running packer init for $dir"
+            packer init "$dir"
+          done
+
+      - name: Run packer build
+        if: steps.changed-files.outputs.all_changed_files != ''
+        run: |
+          # xorriso needed for vsphere-iso to build Windows template
+          sudo apt-add-repository universe
+          sudo apt-get install -y xorriso
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            dir=$(dirname "$file")
+            echo "Building $dir"
+            packer build "$dir"
+          done
+
+      - name: Set vars from artifact info
+        id: set_TMPL_NAME
+        run: |
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            dir=$(dirname "$file")
+            echo "Setting vars for $dir"
+            echo "TMPL_NAME=$(cat "$dir/build-manifest.json" | jq -r '.builds[0].artifact_id')" >> $GITHUB_OUTPUT
+          done
+
+  call_terraform_vsphere-tmpl-verify:
+    needs: validate_and_build
+    uses: eingram-homelab/reusable_workflows/.github/workflows/vsphere-tmpl-verify.yaml@main
+    with:
+      TMPL_NAME: ${{ needs.validate_and_build.outputs.TMPL_NAME }}
+    secrets:
+      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+      GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
+
+  publish_template:
+    needs:
+      - call_terraform_vsphere-tmpl-verify
+      - validate_and_build
+    runs-on: arc-runners
+    env:
+      VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          repository: eingram-homelab/packer
+          ref: main
+
+      - name: Install PowerShell
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https software-properties-common
+          source /etc/os-release
+          wget -q https://packages.microsoft.com/config/ubuntu/$VERSION_ID/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Set oldTemplateName var
+        id: oldTemplateName
+        run: |
+          if [[ ${{ needs.validate_and_build.outputs.TMPL_NAME }} =~ (.*)__ ]]; then
+            echo oldTemplateName="${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish Template
+        run: |
+          ./scripts/publish_template.ps1 `
+            -newTemplateName ${{ needs.validate_and_build.outputs.TMPL_NAME }} `
+            -oldTemplateName ${{ steps.oldTemplateName.outputs.oldTemplateName }}
+        shell: pwsh
