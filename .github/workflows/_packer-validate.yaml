@@ -49,7 +49,10 @@ jobs:
           dirs=$(for file in $CHANGED_FILES; do dirname "$file"; done | sort -u)
           for dir in $dirs; do
             echo "=== Processing $dir ==="
+            echo "Running packer fmt -check for $dir"
             packer fmt -check "$dir"
+            echo "Running packer init for $dir"
             packer init "$dir"
+            echo "Running packer validate for $dir"
             packer validate "$dir"
           done
