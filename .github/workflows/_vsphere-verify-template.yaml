@@ -54,19 +54,19 @@ jobs:
 
       - name: Run terraform init
         run: |
-          cd projects/cicd/vsphere/tmpl-verify
+          cd cicd/vsphere/tmpl-verify
           terraform init
 
       - name: Run terraform apply
         run: |
-          cd projects/cicd/vsphere/tmpl-verify
+          cd cicd/vsphere/tmpl-verify
           terraform apply --auto-approve
 
       - name: Test VM network connectivity
         id: ping
         run: |
           sudo apt-get update && sudo apt-get install -y iputils-ping
-          cd projects/cicd/vsphere/tmpl-verify
+          cd cicd/vsphere/tmpl-verify
           ping -c 4 "$(terraform output -json default_ip_address | jq -r '.[0]')"
           if [ $? -eq 0 ]; then
             echo "VM is reachable"
@@ -78,5 +78,5 @@ jobs:
       - name: Destroy Test VM
         if: steps.ping.outcome == 'success'
         run: |
-          cd projects/cicd/vsphere/tmpl-verify
+          cd cicd/vsphere/tmpl-verify
           terraform destroy --auto-approve
