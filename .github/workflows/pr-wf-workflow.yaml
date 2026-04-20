@@ -1,15 +1,38 @@
 ---
-name: Pull Request Workflow | Github Actions Workflow
+name: Validate Workflows
 
 on:
   pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/**'
-      - 'workflow-templates/**'
 
 jobs:
+  changes:
+    runs-on: arc-runners
+    outputs:
+      workflows: ${{ steps.changed.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for workflow file changes
+        id: changed
+        uses: tj-actions/changed-files@v46.0.5
+        with:
+          files: '.github/workflows/**'
+
   validate:
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
     name: Validate Workflow Files
     uses: eingram-homelab/reusable_workflows/.github/workflows/_validate-workflow.yaml@main
+
+  gate:
+    needs: [validate]
+    if: always()
+    runs-on: arc-runners
+    steps:
+      - name: Check validation result
+        run: |
+          result="${{ needs.validate.result }}"
+          if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+            exit 1
+          fi
