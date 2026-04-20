@@ -16,6 +16,9 @@ on:
       VAULT_TOKEN:
         description: 'Vault token with permissions to access secrets needed for build'
         required: true
+      GCP_STORAGE:
+        description: 'Base64-encoded GCP service account key for Terraform template verification'
+        required: true
 
 jobs:
   build:
@@ -75,50 +78,20 @@ jobs:
           done
 
   call_terraform_vsphere-tmpl-verify:
-    needs: validate_and_build
-    uses: eingram-homelab/reusable_workflows/.github/workflows/vsphere-tmpl-verify.yaml@main
+    needs: build
+    uses: eingram-homelab/reusable_workflows/.github/workflows/vsphere-verify-template.yaml@main
     with:
-      TMPL_NAME: ${{ needs.validate_and_build.outputs.TMPL_NAME }}
+      TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
     secrets:
       VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
       GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
 
-  publish_template:
+  call_publish_template:
     needs:
       - call_terraform_vsphere-tmpl-verify
-      - validate_and_build
-    runs-on: arc-runners
-    env:
-      VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+      - build
+    uses: eingram-homelab/reusable_workflows/.github/workflows/packer-publish-template.yaml@main
+    with:
+      TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
+    secrets:
       VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          repository: eingram-homelab/packer
-          ref: main
-
-      - name: Install PowerShell
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget apt-transport-https software-properties-common
-          source /etc/os-release
-          wget -q https://packages.microsoft.com/config/ubuntu/$VERSION_ID/packages-microsoft-prod.deb
-          sudo dpkg -i packages-microsoft-prod.deb
-          rm packages-microsoft-prod.deb
-          sudo apt-get update
-          sudo apt-get install -y powershell
-
-      - name: Set oldTemplateName var
-        id: oldTemplateName
-        run: |
-          if [[ ${{ needs.validate_and_build.outputs.TMPL_NAME }} =~ (.*)__ ]]; then
-            echo oldTemplateName="${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Publish Template
-        run: |
-          ./scripts/publish_template.ps1 `
-            -newTemplateName ${{ needs.validate_and_build.outputs.TMPL_NAME }} `
-            -oldTemplateName ${{ steps.oldTemplateName.outputs.oldTemplateName }}
-        shell: pwsh
