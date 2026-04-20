@@ -1,0 +1,61 @@
+---
+name: Packer Publish Template
+
+on:
+  workflow_call:
+    inputs:
+      TMPL_NAME:
+        description: 'Timestamped vSphere template name produced by packer build (e.g. TMP-Rocky9_Packer__20260419123000)'
+        required: true
+        type: string
+      repository:
+        description: 'Repository containing publish_template.ps1 script'
+        type: string
+        default: 'eingram-homelab/pkr-vsphere'
+      ref:
+        description: 'Branch or ref to check out'
+        type: string
+        default: 'main'
+    secrets:
+      VAULT_TOKEN:
+        description: 'Vault token with permissions to access vSphere secrets'
+        required: true
+
+jobs:
+  publish_template:
+    name: Publish vSphere Template
+    runs-on: arc-runners
+    env:
+      VAULT_ADDR: ${{ vars.VAULT_ADDR }}
+      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+
+      - name: Install PowerShell
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https software-properties-common
+          source /etc/os-release
+          wget -q https://packages.microsoft.com/config/ubuntu/$VERSION_ID/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Set oldTemplateName var
+        id: oldTemplateName
+        run: |
+          if [[ "${{ inputs.TMPL_NAME }}" =~ (.*)__ ]]; then
+            echo "oldTemplateName=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish Template
+        run: |
+          ./scripts/publish_template.ps1 `
+            -newTemplateName "${{ inputs.TMPL_NAME }}" `
+            -oldTemplateName "${{ steps.oldTemplateName.outputs.oldTemplateName }}"
+        shell: pwsh
