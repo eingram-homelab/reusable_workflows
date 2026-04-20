@@ -1,0 +1,15 @@
+---
+name: Validate Reusable Workflows
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - 'workflow-templates/**'
+
+jobs:
+  validate:
+    name: Validate Workflow Files
+    uses: eingram-homelab/reusable_workflows/.github/workflows/validate-workflow.yaml@main

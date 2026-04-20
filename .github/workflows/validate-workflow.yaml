@@ -1,13 +1,19 @@
 ---
-name: Validate Reusable Workflows
+name: Validate Workflow Files
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/**'
-      - 'workflow-templates/**'
+  workflow_call:
+    inputs:
+      paths:
+        description: 'Space-separated list of paths to lint with yamllint'
+        type: string
+        default: '.github/workflows/ workflow-templates/'
+      changed_files_patterns:
+        description: 'Newline-separated glob patterns passed to tj-actions/changed-files'
+        type: string
+        default: |
+          .github/workflows/**
+          workflow-templates/**
 
 jobs:
   validate:
@@ -36,24 +42,13 @@ jobs:
               truthy: {allowed-values: ["true", "false", "on", "off"]},
               comments: disable
             }
-          }' .github/workflows/ workflow-templates/
-
-  changed-files-check:
-    name: Validate Changed Files Summary
-    runs-on: arc-runners
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
-        with:
-          fetch-depth: 0
+          }' ${{ inputs.paths }}
 
       - name: Get changed workflow files
         id: changed
         uses: tj-actions/changed-files@v46
         with:
-          files: |
-            .github/workflows/**
-            workflow-templates/**
+          files: ${{ inputs.changed_files_patterns }}
 
       - name: List changed files
         if: steps.changed.outputs.any_changed == 'true'
