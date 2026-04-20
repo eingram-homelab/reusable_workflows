@@ -305,7 +305,7 @@ jobs:
   call_post_deploy_vsphere_workflow:
     needs: deploy
     if: needs.deploy.outputs.project_type == 'vsphere'
-    uses: eingram-homelab/ansible-col-homelab/.github/workflows/ansible-run-playbook.yaml@main
+    uses: eingram-homelab/ansible-col-homelab/.github/workflows/_ansible-run-playbook.yaml@main
     with:
       limit: ${{ needs.deploy.outputs.ansible_limit }}
       playbook: "new_build.yaml"
@@ -316,7 +316,7 @@ jobs:
   call_post_deploy_rancher_workflow:
     needs: deploy
     if: needs.deploy.outputs.project_type == 'rancher'
-    uses: eingram-homelab/ansible-col-homelab/.github/workflows/ansible-run-playbook.yaml@main
+    uses: eingram-homelab/ansible-col-homelab/.github/workflows/_ansible-run-playbook.yaml@main
     with:
       limit: ""
       extra_vars: "cluster=${{ needs.deploy.outputs.cluster_name }} lb_ip=${{ needs.deploy.outputs.cluster_lb_ip }}"

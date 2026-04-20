@@ -1,10 +1,10 @@
-# .github
+# reusable_workflows
 
-Default community health files and shared reusable GitHub Actions workflows for the [eingram-homelab](https://github.com/eingram-homelab) organization.
+Shared reusable GitHub Actions workflows for the [eingram-homelab](https://github.com/eingram-homelab) organization.
 
 ## Reusable Workflows
 
-Reusable workflows live in [`.github/workflows/`](.github/workflows/) and can be called from any repository in the organization using `workflow_call`.
+Reusable workflows live in [`.github/workflows/`](.github/workflows/) and are prefixed with `_` to distinguish them from workflows that run directly in this repository. They can be called from any repository in the organization using `workflow_call`.
 
 ### Usage
 
@@ -13,7 +13,7 @@ Reference a reusable workflow from another repo like this:
 ```yaml
 jobs:
   my-job:
-    uses: eingram-homelab/.github/.github/workflows/<workflow-name>.yaml@main
+    uses: eingram-homelab/reusable_workflows/.github/workflows/<workflow-name>.yaml@main
     with:
       input_name: value
     secrets:
@@ -22,7 +22,9 @@ jobs:
 
 ---
 
-### `ansible-lint.yaml`
+## Ansible
+
+### `_ansible-lint.yaml`
 
 Runs `ansible-lint` against the checked-out repository.
 
@@ -30,64 +32,181 @@ Runs `ansible-lint` against the checked-out repository.
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `runner` | No | `ubuntu-latest` | Runner label to use |
-
-**Example caller:**
-
-```yaml
-jobs:
-  lint:
-    uses: eingram-homelab/.github/.github/workflows/ansible-lint.yaml@main
-```
+| `repository` | No | calling repo | Repository containing Ansible playbooks and roles |
+| `ref` | No | PR head branch | Branch or ref to check out |
 
 ---
 
-### `run-ansible-playbook.yaml`
+### `_ansible-run-playbook.yaml`
 
-Installs Ansible and its dependencies, then runs a playbook from the `ansible-col-homelab` collection.
+Runs a playbook from the `ansible-col-homelab` collection.
 
 **Inputs:**
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `playbook` | **Yes** | — | Playbook filename under `playbooks/` |
-| `ansible_user` | **Yes** | — | SSH user for Ansible connections |
-| `limit` | No | `''` | Ansible limit flag (e.g. `-l host1,host2`) |
-| `extra_vars` | No | `''` | Extra vars as `key=value` pairs |
-| `runner` | No | `arc-runners` | Runner label to use |
+| `playbook` | **Yes** | — | Playbook to run |
+| `ansible_user` | **Yes** | — | Ansible user for the playbook run |
+| `limit` | **Yes** | — | Ansible limit for the playbook run |
+| `extra_vars` | No | `''` | Extra variables for the playbook run |
 
 **Secrets:**
 
 | Secret | Required | Description |
 |--------|----------|-------------|
 | `VAULT_TOKEN` | **Yes** | HashiCorp Vault token |
-| `ANSIBLE_SSH_KEY` | **Yes** | Private SSH key for Ansible |
-
-**Example caller:**
-
-```yaml
-jobs:
-  run-playbook:
-    uses: eingram-homelab/.github/.github/workflows/run-ansible-playbook.yaml@main
-    with:
-      playbook: new_build.yaml
-      ansible_user: ansible
-      limit: '-l host1.example.com'
-    secrets: inherit
-```
 
 ---
 
-### `terraform-deploy.yaml`
+### `_build-ansible-ee.yaml`
 
-Runs `fmt -check`, `init`, `validate`, and `apply` for a given Terraform project directory.
+Builds and pushes an Ansible Execution Environment image to a container registry.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `ee_dir` | **Yes** | — | Path to the EE definition directory |
+| `ee_name` | **Yes** | — | Name for the EE image |
+| `ee_version` | **Yes** | — | Version tag for the EE image |
+| `registry` | No | `gitea.local.lan` | Container registry to push to |
+| `registry_user` | No | `eingram` | Username for the container registry |
+| `runner` | No | `self-hosted` | Runner to use |
+
+**Secrets:**
+
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `REGISTRY_PASSWORD` | **Yes** | Password for the container registry |
+
+---
+
+## Packer
+
+### `_packer-validate.yaml`
+
+Runs `packer fmt -check`, `packer init`, and `packer validate` against all changed `.pkr.hcl` files.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `repository` | No | calling repo | Repository containing Packer templates |
+| `ref` | No | PR head branch | Branch or ref to check out |
+
+**Secrets:**
+
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `VAULT_TOKEN` | **Yes** | Vault token for resolving `vault()` locals |
+
+---
+
+### `_packer-build.yaml`
+
+Runs `packer init` and `packer build` against all changed `.pkr.hcl` files, then calls `_vsphere-verify-template.yaml` and `_packer-publish-template.yaml`.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `repository` | No | calling repo | Repository containing Packer templates |
+| `ref` | No | PR head branch | Branch or ref to check out |
+
+**Secrets:**
+
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `VAULT_TOKEN` | **Yes** | Vault token for build secrets |
+| `GCP_STORAGE` | **Yes** | Base64-encoded GCP service account key for Terraform template verification |
+
+**Outputs:**
+
+| Output | Description |
+|--------|-------------|
+| `TMPL_NAME` | Timestamped vSphere template name from the build manifest |
+
+---
+
+### `_packer-publish-template.yaml`
+
+Deletes the previous vCenter template and renames the newly built timestamped template to the canonical name using `scripts/publish_template.ps1`.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `TMPL_NAME` | **Yes** | — | Timestamped template name from packer build |
+| `repository` | No | `eingram-homelab/pkr-vsphere` | Repository containing `publish_template.ps1` |
+| `ref` | No | `main` | Branch or ref to check out |
+
+**Secrets:**
+
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `VAULT_TOKEN` | **Yes** | Vault token for vSphere credentials |
+
+---
+
+### `_vsphere-verify-template.yaml`
+
+Spins up a test VM from the newly built template using Terraform to verify the template is functional.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `TMPL_NAME` | **Yes** | — | vSphere template name to verify |
+
+**Secrets:**
+
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `VAULT_TOKEN` | **Yes** | Vault token for vSphere credentials |
+| `GCP_STORAGE` | **Yes** | Base64-encoded GCP service account key for Terraform state |
+
+---
+
+## Terraform
+
+### `_terraform-lint.yaml`
+
+Runs `tflint` against all changed Terraform directories.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `repository` | No | calling repo | Repository containing Terraform code |
+| `ref` | No | PR head branch | Branch or ref to check out |
+
+---
+
+### `_terraform-validate.yaml`
+
+Runs `terraform init` and `terraform validate` against all changed Terraform directories.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `repository` | No | calling repo | Repository containing Terraform code |
+| `ref` | No | PR head branch | Branch or ref to check out |
+
+**Secrets:** `VAULT_TOKEN`, `GCP_STORAGE` (inherited from calling workflow)
+
+---
+
+### `_terraform-deploy.yaml`
+
+Runs `terraform fmt -check`, `init`, `validate`, and `apply` for a given project directory.
 
 **Inputs:**
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `project_dir` | **Yes** | — | Path to the Terraform project directory |
-| `terraform_version` | No | `1.11.3` | Terraform version to install |
+| `terraform_version` | No | `1.11.3` | Terraform version to use |
 | `gcs_bucket` | No | `yc-srv1-tfstate` | GCS bucket for remote state |
 | `runner` | No | `arc-runners` | Runner label to use |
 
@@ -96,7 +215,49 @@ Runs `fmt -check`, `init`, `validate`, and `apply` for a given Terraform project
 | Secret | Required | Description |
 |--------|----------|-------------|
 | `VAULT_TOKEN` | **Yes** | HashiCorp Vault token |
-| `GCP_STORAGE` | **Yes** | Base64-encoded GCS service-account credentials JSON |
+| `GCP_STORAGE` | **Yes** | Base64-encoded GCS service account credentials JSON |
+
+---
+
+### `_terraform-deploy-project.yaml`
+
+Deploys a Terraform project and emits outputs (project name, type, Ansible limit/user, cluster info) for use by downstream jobs.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `repository` | No | calling repo | Repository containing Terraform code |
+| `ref` | No | PR head branch | Branch or ref to check out |
+
+**Secrets:** `VAULT_TOKEN`, `GCP_STORAGE` (inherited from calling workflow)
+
+---
+
+## Workflows
+
+### `_validate-workflow.yaml`
+
+Runs `yamllint` against workflow files and validates that all `workflow_call` inputs and secrets have descriptions and types.
+
+**Inputs:**
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `paths` | No | `.github/workflows/ workflow-templates/` | Space-separated paths to lint |
+| `changed_files_patterns` | No | `**/.github/workflows/**, **/workflow-templates/**` | Glob patterns for changed-files detection |
+
+---
+
+## Workflow Templates
+
+Starter workflow templates live in [`workflow-templates/`](workflow-templates/). They appear in the GitHub Actions "New workflow" UI for all repositories in the organization, under the `eingram-homelab` section.
+
+| Template | Description |
+|----------|-------------|
+| `ansible-lint.yaml` | Lint Ansible code on push |
+| `build-ansible-ee.yaml` | Build and push an Ansible EE image |
+| `terraform-deploy.yaml` | Deploy a Terraform project on push to main |
 
 **Example caller:**
 

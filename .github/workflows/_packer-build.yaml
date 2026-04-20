@@ -79,7 +79,7 @@ jobs:
 
   call_terraform_vsphere-tmpl-verify:
     needs: build
-    uses: eingram-homelab/reusable_workflows/.github/workflows/vsphere-verify-template.yaml@main
+    uses: eingram-homelab/reusable_workflows/.github/workflows/_vsphere-verify-template.yaml@main
     with:
       TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
     secrets:
@@ -90,7 +90,7 @@ jobs:
     needs:
       - call_terraform_vsphere-tmpl-verify
       - build
-    uses: eingram-homelab/reusable_workflows/.github/workflows/packer-publish-template.yaml@main
+    uses: eingram-homelab/reusable_workflows/.github/workflows/_packer-publish-template.yaml@main
     with:
       TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
     secrets:

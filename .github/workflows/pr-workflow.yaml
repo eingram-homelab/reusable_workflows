@@ -12,4 +12,4 @@ on:
 jobs:
   validate:
     name: Validate Workflow Files
-    uses: eingram-homelab/reusable_workflows/.github/workflows/validate-workflow.yaml@main
+    uses: eingram-homelab/reusable_workflows/.github/workflows/_validate-workflow.yaml@main
