@@ -1,5 +1,5 @@
 ---
-name: Validate Reusable Workflows
+name: Pull Request Workflow | Github Actions Workflow
 
 on:
   pull_request:

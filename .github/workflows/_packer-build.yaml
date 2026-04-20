@@ -12,6 +12,10 @@ on:
         description: 'Branch or ref to check out'
         type: string
         default: ''
+      directories:
+        description: 'Space-separated list of packer directories to build. Overrides changed-files detection when provided (e.g. for manual dispatch).'
+        type: string
+        default: ''
     secrets:
       VAULT_TOKEN:
         description: 'Vault token with permissions to access secrets needed for build'
@@ -43,38 +47,56 @@ jobs:
 
       - name: Get changed files
         id: changed-files
+        if: inputs.directories == ''
         uses: tj-actions/changed-files@v46.0.5
         with:
           files: |
             **/*.pkr.hcl
 
-      - name: Run packer init
+      - name: Resolve directories to build
+        id: dirs
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            dir=$(dirname "$file")
+          if [[ -n "${{ inputs.directories }}" ]]; then
+            # Manual dispatch: use provided directories directly
+            dirs="${{ inputs.directories }}"
+          else
+            # Push event: derive unique dirs from changed .pkr.hcl files
+            dirs=$(for file in $CHANGED_FILES; do dirname "$file"; done | sort -u | tr '\n' ' ')
+          fi
+          echo "dirs=$dirs" >> $GITHUB_OUTPUT
+
+      - name: Run packer init
+        env:
+          DIRS: ${{ steps.dirs.outputs.dirs }}
+        run: |
+          for dir in $DIRS; do
             echo "Running packer init for $dir"
             packer init "$dir"
           done
 
       - name: Run packer build
-        if: steps.changed-files.outputs.all_changed_files != ''
+        if: steps.dirs.outputs.dirs != ''
+        env:
+          DIRS: ${{ steps.dirs.outputs.dirs }}
         run: |
           # xorriso needed for vsphere-iso to build Windows template
           sudo apt-add-repository universe
           sudo apt-get install -y xorriso
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            dir=$(dirname "$file")
+          for dir in $DIRS; do
             echo "Building $dir"
             packer build "$dir"
           done
 
       - name: Set vars from artifact info
+        env:
+          DIRS: ${{ steps.dirs.outputs.dirs }}
         id: set_TMPL_NAME
         run: |
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            dir=$(dirname "$file")
+          for dir in $DIRS; do
             echo "Setting vars for $dir"
-            echo "TMPL_NAME=$(cat "$dir/build-manifest.json" | jq -r '.builds[0].artifact_id')" >> $GITHUB_OUTPUT
+            echo "TMPL_NAME=$(jq -r '.builds[0].artifact_id' "$dir/build-manifest.json")" >> $GITHUB_OUTPUT
           done
 
   call_terraform_vsphere-tmpl-verify:
