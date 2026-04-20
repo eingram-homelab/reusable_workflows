@@ -55,4 +55,5 @@ jobs:
             packer init "$dir"
             echo "Running packer validate for $dir"
             packer validate "$dir"
+            echo "Finished validating $dir"
           done
