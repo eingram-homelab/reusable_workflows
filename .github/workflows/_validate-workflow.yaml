@@ -7,13 +7,12 @@ on:
       paths:
         description: 'Space-separated list of paths to lint with yamllint'
         type: string
-        default: '.github/workflows/ workflow-templates/'
+        default: '.github/workflows/'
       changed_files_patterns:
         description: 'Newline-separated glob patterns passed to tj-actions/changed-files'
         type: string
         default: |
           .github/workflows/**
-          workflow-templates/**
 
 jobs:
   validate:
