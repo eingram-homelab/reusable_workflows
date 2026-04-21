@@ -27,6 +27,7 @@ on:
 jobs:
   build:
     outputs:
+      HAS_DIRS: ${{ steps.dirs.outputs.has_dirs }}
       TMPL_NAME: ${{ steps.set_TMPL_NAME.outputs.TMPL_NAME }}
     name: Build Packer Templates
     runs-on: arc-runners
@@ -41,9 +42,7 @@ jobs:
           ref: ${{ inputs.ref || github.head_ref }}
 
       - name: Setup Packer
-        uses: hashicorp/setup-packer@main
-        with:
-          version: "latest"
+        uses: hashicorp/setup-packer@v3.2.0
 
       - name: Get changed files
         id: changed-files
@@ -62,12 +61,23 @@ jobs:
             # Manual dispatch: use provided directories directly
             dirs="${{ inputs.directories }}"
           else
-            # Push event: derive unique dirs from changed .pkr.hcl files
-            dirs=$(for file in $CHANGED_FILES; do dirname "$file"; done | sort -u | tr '\n' ' ')
+            # Push event: derive unique dirs from changed .pkr.hcl files that still exist.
+            dirs=$(for file in $CHANGED_FILES; do
+              dir=$(dirname "$file")
+              if [[ -d "$dir" ]] && compgen -G "$dir/*.pkr.hcl" > /dev/null; then
+                echo "$dir"
+              fi
+            done | sort -u | tr '\n' ' ')
           fi
           echo "dirs=$dirs" >> $GITHUB_OUTPUT
+          if [[ -n "$dirs" ]]; then
+            echo "has_dirs=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_dirs=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Run packer init
+        if: steps.dirs.outputs.dirs != ''
         env:
           DIRS: ${{ steps.dirs.outputs.dirs }}
         run: |
@@ -90,6 +100,7 @@ jobs:
           done
 
       - name: Set vars from artifact info
+        if: steps.dirs.outputs.dirs != ''
         env:
           DIRS: ${{ steps.dirs.outputs.dirs }}
         id: set_TMPL_NAME
@@ -101,6 +112,7 @@ jobs:
 
   call_terraform_vsphere-tmpl-verify:
     needs: build
+    if: needs.build.outputs.HAS_DIRS == 'true'
     uses: eingram-homelab/reusable_workflows/.github/workflows/_vsphere-verify-template.yaml@main
     with:
       TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
@@ -112,6 +124,7 @@ jobs:
     needs:
       - call_terraform_vsphere-tmpl-verify
       - build
+    if: needs.build.outputs.HAS_DIRS == 'true'
     uses: eingram-homelab/reusable_workflows/.github/workflows/_packer-publish-template.yaml@main
     with:
       TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
