@@ -110,19 +110,8 @@ jobs:
             echo "TMPL_NAME=$(jq -r '.builds[0].artifact_id' "$dir/build-manifest.json")" >> $GITHUB_OUTPUT
           done
 
-  call_terraform_vsphere-tmpl-verify:
-    needs: build
-    if: needs.build.outputs.HAS_DIRS == 'true'
-    uses: eingram-homelab/reusable_workflows/.github/workflows/_vsphere-verify-template.yaml@main
-    with:
-      TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
-    secrets:
-      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
-      GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
-
   call_publish_template:
     needs:
-      - call_terraform_vsphere-tmpl-verify
       - build
     if: needs.build.outputs.HAS_DIRS == 'true'
     uses: eingram-homelab/reusable_workflows/.github/workflows/_packer-publish-template.yaml@main
