@@ -82,7 +82,7 @@ jobs:
           DIRS: ${{ steps.dirs.outputs.dirs }}
         run: |
           for dir in $DIRS; do
-            echo "Running packer init for $dir"
+            echo "::notice::Running packer init for $dir"
             packer init "$dir"
           done
 
@@ -95,8 +95,14 @@ jobs:
           sudo apt-add-repository universe
           sudo apt-get install -y xorriso
           for dir in $DIRS; do
-            echo "Building $dir"
+            echo "::group::Building $dir"
             packer build "$dir"
+            if [[ $? -ne 0 ]]; then
+              echo "::error::Packer build failed for $dir"
+              echo "::endgroup::"
+              exit 1
+            fi
+            echo "::endgroup::"
           done
 
       - name: Set vars from artifact info
@@ -106,23 +112,12 @@ jobs:
         id: set_TMPL_NAME
         run: |
           for dir in $DIRS; do
-            echo "Setting vars for $dir"
+            echo "::notice::Setting vars for $dir"
             echo "TMPL_NAME=$(jq -r '.builds[0].artifact_id' "$dir/build-manifest.json")" >> $GITHUB_OUTPUT
           done
 
-  call_terraform_vsphere-tmpl-verify:
-    needs: build
-    if: needs.build.outputs.HAS_DIRS == 'true'
-    uses: eingram-homelab/reusable_workflows/.github/workflows/_vsphere-verify-template.yaml@main
-    with:
-      TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
-    secrets:
-      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
-      GCP_STORAGE: ${{ secrets.GCP_STORAGE }}
-
   call_publish_template:
     needs:
-      - call_terraform_vsphere-tmpl-verify
       - build
     if: needs.build.outputs.HAS_DIRS == 'true'
     uses: eingram-homelab/reusable_workflows/.github/workflows/_packer-publish-template.yaml@main

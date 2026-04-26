@@ -48,12 +48,12 @@ jobs:
         run: |
           dirs=$(for file in $CHANGED_FILES; do dirname "$file"; done | sort -u)
           for dir in $dirs; do
-            echo "=== Processing $dir ==="
-            echo "Running packer fmt -check for $dir"
+            echo "::notice::=== Processing $dir ==="
+            echo "::notice::Running packer fmt -check for $dir"
             packer fmt -check "$dir"
-            echo "Running packer init for $dir"
+            echo "::notice::Running packer init for $dir"
             packer init "$dir"
-            echo "Running packer validate for $dir"
+            echo "::notice::Running packer validate for $dir"
             packer validate "$dir"
-            echo "Finished validating $dir"
+            echo "::notice::Finished validating $dir"
           done

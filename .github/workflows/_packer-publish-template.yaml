@@ -58,4 +58,5 @@ jobs:
           ./scripts/publish_template.ps1 `
             -newTemplateName "${{ inputs.TMPL_NAME }}" `
             -oldTemplateName "${{ steps.oldTemplateName.outputs.oldTemplateName }}"
+          echo "::notice::Published template ${{ inputs.TMPL_NAME }} and removed old template ${{ steps.oldTemplateName.outputs.oldTemplateName }}"
         shell: pwsh
