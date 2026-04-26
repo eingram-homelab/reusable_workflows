@@ -20,6 +20,8 @@ jobs:
           files: |
             .github/workflows/**/*.yaml
             .github/workflows/**/*.yml
+            .github/actions/**/*.yaml
+            .github/actions/**/*.yml
 
   validate:
     needs: changes
