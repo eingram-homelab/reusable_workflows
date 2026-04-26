@@ -1,4 +1,4 @@
-# reusable_workflows
+# reusable-workflows
 
 Shared reusable GitHub Actions workflows for the [eingram-homelab](https://github.com/eingram-homelab) organization.
 
@@ -13,7 +13,7 @@ Reference a reusable workflow from another repo like this:
 ```yaml
 jobs:
   my-job:
-    uses: eingram-homelab/reusable_workflows/.github/workflows/<workflow-name>.yaml@main
+    uses: eingram-homelab/reusable-workflows/.github/workflows/<workflow-name>.yaml@main
     with:
       input_name: value
     secrets:

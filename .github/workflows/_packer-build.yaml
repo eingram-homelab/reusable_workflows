@@ -120,7 +120,7 @@ jobs:
     needs:
       - build
     if: needs.build.outputs.HAS_DIRS == 'true'
-    uses: eingram-homelab/reusable_workflows/.github/workflows/_packer-publish-template.yaml@main
+    uses: eingram-homelab/reusable-workflows/.github/workflows/_packer-publish-template.yaml@main
     with:
       TMPL_NAME: ${{ needs.build.outputs.TMPL_NAME }}
     secrets:
