@@ -1,5 +1,5 @@
 name: Monorepo Semver Tag
-description: Determine a semantic version bump from commit messages and tag content.
+description: Determine a semantic version bump from commit messages and create tags.
 
 inputs:
   before_sha:
