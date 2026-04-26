@@ -1,5 +1,5 @@
 ---
-name: Validate Workflows
+name: Pull Request Validation
 
 on:
   pull_request:
@@ -17,12 +17,14 @@ jobs:
         id: changed
         uses: tj-actions/changed-files@v46.0.5
         with:
-          files: '.github/workflows/**'
+          files: |
+            .github/workflows/**/*.yaml
+            .github/workflows/**/*.yml
 
   validate:
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
-    name: Validate Workflow Files
+    name: Run Validation Checks
     uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@main
 
   gate:
