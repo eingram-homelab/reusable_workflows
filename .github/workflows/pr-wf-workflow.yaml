@@ -23,7 +23,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
     name: Validate Workflow Files
-    uses: eingram-homelab/reusable_workflows/.github/workflows/_validate-workflow.yaml@main
+    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@main
 
   gate:
     needs: [validate]
