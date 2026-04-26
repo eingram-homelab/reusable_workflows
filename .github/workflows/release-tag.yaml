@@ -25,16 +25,20 @@ jobs:
           files: |
             .github/workflows/_*.yaml
             .github/workflows/_*.yml
+            .github/actions/*.yaml
+            .github/actions/*.yml
 
   validate:
     needs: changes
     if: needs.changes.outputs.reusable_workflows == 'true'
-    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@main
+    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.0
     name: Run Validation Checks
     with:
       changed_files_patterns: |
         .github/workflows/_*.yaml
         .github/workflows/_*.yml
+        .github/actions/*.yaml
+        .github/actions/*.yml
 
   tag:
     needs: [changes, validate]

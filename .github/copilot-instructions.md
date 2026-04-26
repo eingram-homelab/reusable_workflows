@@ -17,7 +17,7 @@ Workflow files that do not start with an underscore are repository-local entrypo
 Current repository-local CI entrypoints:
 - `f-branch-validate.yaml` for advisory validation on feature branch pushes
 - `pr-validate.yaml` for merge-blocking validation on pull requests to `main`
-- `reusable-workflow-release.yaml` for validation and release tagging on pushes to `main`
+- `release-tag.yaml` for validation and release tagging on pushes to `main`
 
 Current reusable validation workflow:
 - `_validate-workflow.yaml` contains the shared validation logic used by the repository-local entrypoints
@@ -58,7 +58,7 @@ This workflow is merge-blocking. If validation fails, the workflow's final `gate
 
 There should be a workflow that runs on pushes to `main` when reusable workflow files change.
 
-That workflow is implemented in `reusable-workflow-release.yaml`.
+That workflow is implemented in `release-tag.yaml`.
 
 That workflow should determine semantic version bumps from commit message structure and create the appropriate tags for each changed reusable workflow.
 
