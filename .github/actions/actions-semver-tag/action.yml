@@ -1,4 +1,4 @@
-name: Monorepo Semver Tag
+name: GitHub Actions Semver Tag
 description: Determine a semantic version bump from commit messages and create tags.
 
 inputs:
@@ -73,10 +73,8 @@ runs:
         created_tags=""
 
         for file in $CHANGED_FILES; do
-          base=$(basename "$file")
-          workflow_name="${base#_}"
-          workflow_name="${workflow_name%.yaml}"
-          workflow_name="${workflow_name%.yml}"
+          dir=$(dirname "$file")
+          workflow_name=$(basename "$dir")
 
           latest_tag=$(git tag --list "${workflow_name}-v*" --sort=-version:refname | head -n1)
 
