@@ -1,0 +1,23 @@
+---
+name: Feature Branch Validation
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  validate:
+    name: Run Validation Checks
+    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@main
+
+  gate:
+    needs: validate
+    if: always()
+    runs-on: arc-runners
+    steps:
+      - name: Publish advisory status
+        run: |
+          echo "Feature branch validation is advisory in this repository."
+          echo "Validation result: ${{ needs.validate.result }}"
+          exit 0

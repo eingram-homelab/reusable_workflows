@@ -16,7 +16,7 @@ on:
 
 jobs:
   validate:
-    name: YAML Lint - Workflow Files
+    name: Workflow Validation Checks
     runs-on: arc-runners
     steps:
       - name: Checkout code

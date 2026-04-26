@@ -1,0 +1,121 @@
+name: Reusable Workflow Semver Tag
+description: Determine a semantic version bump from commit messages and tag changed reusable workflows.
+
+inputs:
+  before_sha:
+    description: Previous commit SHA from the push event.
+    required: true
+  after_sha:
+    description: Current commit SHA from the push event.
+    required: true
+  changed_files:
+    description: Space-separated list of changed reusable workflow files.
+    required: true
+  target_sha:
+    description: Commit SHA to tag.
+    required: true
+
+outputs:
+  bump:
+    description: Calculated semantic version bump.
+    value: ${{ steps.bump.outputs.bump }}
+  created_tags:
+    description: Space-separated list of tags created by this action.
+    value: ${{ steps.tag.outputs.created_tags }}
+
+runs:
+  using: composite
+  steps:
+    - name: Fetch tags
+      shell: bash
+      run: git fetch --tags --force
+
+    - name: Configure git identity
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+    - name: Determine semantic version bump
+      id: bump
+      shell: bash
+      env:
+        BEFORE_SHA: ${{ inputs.before_sha }}
+        AFTER_SHA: ${{ inputs.after_sha }}
+      run: |
+        if [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
+          range="$AFTER_SHA"
+        else
+          range="$BEFORE_SHA..$AFTER_SHA"
+        fi
+
+        messages=$(git log --format=%s%n%b "$range")
+        subjects=$(git log --format=%s "$range")
+        bump=patch
+
+        if grep -Eq '(^|[[:space:]])BREAKING CHANGE:' <<<"$messages" || grep -Eq '^.+!:' <<<"$subjects"; then
+          bump=major
+        elif grep -Eq '^feat(\(.+\))?: ' <<<"$subjects"; then
+          bump=minor
+        fi
+
+        echo "bump=$bump" >> "$GITHUB_OUTPUT"
+        echo "Calculated version bump: $bump"
+
+    - name: Tag changed reusable workflows
+      id: tag
+      shell: bash
+      env:
+        CHANGED_FILES: ${{ inputs.changed_files }}
+        VERSION_BUMP: ${{ steps.bump.outputs.bump }}
+        TARGET_SHA: ${{ inputs.target_sha }}
+      run: |
+        created_tags=""
+
+        for file in $CHANGED_FILES; do
+          base=$(basename "$file")
+          workflow_name="${base#_}"
+          workflow_name="${workflow_name%.yaml}"
+          workflow_name="${workflow_name%.yml}"
+
+          latest_tag=$(git tag --list "${workflow_name}-v*" --sort=-version:refname | head -n1)
+
+          if [[ -z "$latest_tag" ]]; then
+            major=0
+            minor=0
+            patch=0
+          else
+            version="${latest_tag#${workflow_name}-v}"
+            IFS='.' read -r major minor patch <<< "$version"
+          fi
+
+          case "$VERSION_BUMP" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            *)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          new_tag="${workflow_name}-v${major}.${minor}.${patch}"
+
+          if git rev-parse "$new_tag" >/dev/null 2>&1; then
+            echo "Tag $new_tag already exists, skipping"
+            continue
+          fi
+
+          git tag "$new_tag" "$TARGET_SHA"
+          git push origin "$new_tag"
+          created_tags="$created_tags $new_tag"
+        done
+
+        created_tags="${created_tags# }"
+        echo "created_tags=$created_tags" >> "$GITHUB_OUTPUT"
+        echo "Created tags:${created_tags:- none}"
