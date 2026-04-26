@@ -47,7 +47,7 @@ jobs:
 
       - name: Tag changed workflows
         id: tag_workflows
-        uses: ./.github/actions/reusable-workflow-semver-tag
+        uses: ./.github/actions/reusable-workflow-semver-tag@reusable-workflow-semver-tag-v0.0.1
         with:
           before_sha: ${{ github.event.before }}
           after_sha: ${{ github.sha }}
