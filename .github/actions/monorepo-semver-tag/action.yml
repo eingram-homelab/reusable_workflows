@@ -1,5 +1,5 @@
-name: Reusable Workflow Semver Tag
-description: Determine a semantic version bump from commit messages and tag changed reusable workflows.
+name: Monorepo Semver Tag
+description: Determine a semantic version bump from commit messages and tag content.
 
 inputs:
   before_sha:
@@ -9,7 +9,7 @@ inputs:
     description: Current commit SHA from the push event.
     required: true
   changed_files:
-    description: Space-separated list of changed reusable workflow files.
+    description: Space-separated list of changed files.
     required: true
   target_sha:
     description: Commit SHA to tag.
@@ -62,7 +62,7 @@ runs:
         echo "bump=$bump" >> "$GITHUB_OUTPUT"
         echo "Calculated version bump: $bump"
 
-    - name: Tag changed reusable workflows
+    - name: Tag changed files
       id: tag
       shell: bash
       env:
