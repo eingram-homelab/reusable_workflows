@@ -45,7 +45,7 @@ jobs:
 
       - name: Tag changed actions
         id: tag_actions
-        uses: ./.github/actions/actions-semver-tag
+        uses: ./.github/actions/actions-semver-tag@actions-semver-tag-v0.0.1
         with:
           before_sha: ${{ github.event.before }}
           after_sha: ${{ github.sha }}
