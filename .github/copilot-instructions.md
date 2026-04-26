@@ -17,7 +17,8 @@ Workflow files that do not start with an underscore are repository-local entrypo
 Current repository-local CI entrypoints:
 - `f-branch-validate.yaml` for advisory validation on feature branch pushes
 - `pr-validate.yaml` for merge-blocking validation on pull requests to `main`
-- `release-tag.yaml` for validation and release tagging on pushes to `main`
+- `release-reusable-workflows.yaml` for reusable workflow release tagging on pushes to `main`
+- `release-actions.yaml` for action release tagging on pushes to `main`
 
 Current reusable validation workflow:
 - `_validate-workflow.yaml` contains the shared validation logic used by the repository-local entrypoints
@@ -56,11 +57,11 @@ This workflow is merge-blocking. If validation fails, the workflow's final `gate
 
 ### Main Branch Release Tagging
 
-There should be a workflow that runs on pushes to `main` when reusable workflow files change.
+There should be separate workflows that run on pushes to `main` for reusable workflows and for actions.
 
-That workflow is implemented in `release-tag.yaml`.
+These workflows are implemented in `release-reusable-workflows.yaml` and `release-actions.yaml`.
 
-That workflow should determine semantic version bumps from commit message structure and create the appropriate tags for each changed reusable workflow.
+These workflows should determine semantic version bumps from commit message structure and create the appropriate tags for each changed reusable workflow or action.
 
 Use commit message structure for version bumping with these rules:
 - commits with `BREAKING CHANGE:` or `!:` imply a major bump
@@ -72,7 +73,9 @@ Workflow tags should be created per reusable workflow using the workflow filenam
 Example:
 - `_validate-workflow.yaml` -> `validate-workflow-v1.2.3`
 
-Only reusable workflows should participate in this tagging flow. Reusable workflows are the files in `.github/workflows/` whose filenames start with `_`.
+Reusable workflow release tagging applies only to files in `.github/workflows/` whose filenames start with `_`.
+
+Action release tagging applies to components under `.github/actions/`.
 
 The shared reusable validation logic for these entrypoints lives in `_validate-workflow.yaml`.
 
@@ -84,4 +87,4 @@ When implementing CI changes in this repository:
 - Preserve the final `gate` job pattern in all CI workflows.
 - Treat feature branch validation as non-blocking.
 - Treat pull request validation to `main` as blocking.
-- Treat release tagging on `main` as applying only to underscore-prefixed reusable workflows.
+- Keep release tagging split by component type: reusable workflows in `release-reusable-workflows.yaml` and actions in `release-actions.yaml`.

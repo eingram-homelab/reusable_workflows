@@ -1,0 +1,76 @@
+---
+name: Release Actions
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  changes:
+    runs-on: arc-runners
+    outputs:
+      changed: ${{ steps.changed.outputs.any_changed }}
+      changed_files: ${{ steps.changed.outputs.all_changed_files }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check for action changes
+        id: changed
+        uses: tj-actions/changed-files@v46.0.5
+        with:
+          files: |
+            .github/actions/**
+
+  validate:
+    needs: changes
+    if: needs.changes.outputs.changed == 'true'
+    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.0
+    name: Run Validation Checks
+    with:
+      changed_files_patterns: |
+        .github/actions/**
+
+  tag:
+    needs: [changes, validate]
+    if: needs.changes.outputs.changed == 'true' && needs.validate.result == 'success'
+    runs-on: arc-runners
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag changed actions
+        id: tag_actions
+        uses: ./.github/actions/actions-semver-tag
+        with:
+          before_sha: ${{ github.event.before }}
+          after_sha: ${{ github.sha }}
+          changed_files: ${{ needs.changes.outputs.changed_files }}
+          target_sha: ${{ github.sha }}
+
+      - name: Show action release tagging summary
+        run: |
+          echo "Calculated bump: ${{ steps.tag_actions.outputs.bump }}"
+          echo "Created tags: ${{ steps.tag_actions.outputs.created_tags || 'none' }}"
+
+  gate:
+    needs: [validate, tag]
+    if: always()
+    runs-on: arc-runners
+    steps:
+      - name: Check validation result
+        run: |
+          result="${{ needs.validate.result }}"
+          tag_result="${{ needs.tag.result }}"
+
+          if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+            exit 1
+          fi
+
+          if [[ "$tag_result" == "failure" || "$tag_result" == "cancelled" ]]; then
+            exit 1
+          fi

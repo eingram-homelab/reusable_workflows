@@ -12,7 +12,7 @@ jobs:
   changes:
     runs-on: arc-runners
     outputs:
-      reusable_workflows: ${{ steps.changed.outputs.any_changed }}
+      changed: ${{ steps.changed.outputs.any_changed }}
       changed_files: ${{ steps.changed.outputs.all_changed_files }}
     steps:
       - uses: actions/checkout@v4
@@ -25,31 +25,27 @@ jobs:
           files: |
             .github/workflows/_*.yaml
             .github/workflows/_*.yml
-            .github/actions/**/*.yaml
-            .github/actions/**/*.yml
 
   validate:
     needs: changes
-    if: needs.changes.outputs.reusable_workflows == 'true'
+    if: needs.changes.outputs.changed == 'true'
     uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.0
     name: Run Validation Checks
     with:
       changed_files_patterns: |
         .github/workflows/_*.yaml
         .github/workflows/_*.yml
-        .github/actions/**/*.yaml
-        .github/actions/**/*.yml
 
   tag:
     needs: [changes, validate]
-    if: needs.changes.outputs.reusable_workflows == 'true' && needs.validate.result == 'success'
+    if: needs.changes.outputs.changed == 'true' && needs.validate.result == 'success'
     runs-on: arc-runners
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Tag changed files
+      - name: Tag changed workflows
         id: tag_workflows
         uses: ./.github/actions/reusable-workflow-semver-tag
         with:
@@ -58,7 +54,7 @@ jobs:
           changed_files: ${{ needs.changes.outputs.changed_files }}
           target_sha: ${{ github.sha }}
 
-      - name: Show release tagging summary
+      - name: Show workflow release tagging summary
         run: |
           echo "Calculated bump: ${{ steps.tag_workflows.outputs.bump }}"
           echo "Created tags: ${{ steps.tag_workflows.outputs.created_tags || 'none' }}"

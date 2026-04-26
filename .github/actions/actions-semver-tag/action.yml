@@ -74,16 +74,16 @@ runs:
 
         for file in $CHANGED_FILES; do
           dir=$(dirname "$file")
-          workflow_name=$(basename "$dir")
+          action_name=$(basename "$dir")
 
-          latest_tag=$(git tag --list "${workflow_name}-v*" --sort=-version:refname | head -n1)
+          latest_tag=$(git tag --list "${action_name}-v*" --sort=-version:refname | head -n1)
 
           if [[ -z "$latest_tag" ]]; then
             major=0
             minor=0
             patch=0
           else
-            version="${latest_tag#${workflow_name}-v}"
+            version="${latest_tag#${action_name}-v}"
             IFS='.' read -r major minor patch <<< "$version"
           fi
 
@@ -102,7 +102,7 @@ runs:
               ;;
           esac
 
-          new_tag="${workflow_name}-v${major}.${minor}.${patch}"
+          new_tag="${action_name}-v${major}.${minor}.${patch}"
 
           if git rev-parse "$new_tag" >/dev/null 2>&1; then
             echo "Tag $new_tag already exists, skipping"
