@@ -28,16 +28,6 @@ jobs:
         uses: actions/setup-python@v6.2.0
         with:
           python-version: '3.13'
-
-      - name: Validate Workflows and Custom Actions
-        uses: jazzsequence/github-action-validator@v1.0.5
-        with:
-          show-ascii-art: false
-          path-to-workflows: |-
-            .github/workflows/*.yml
-            .github/workflows/*.yaml
-            .github/actions/**/action.yml
-            .github/actions/**/action.yaml
     
       - name: Get changed workflow files
         id: changed
