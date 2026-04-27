@@ -37,7 +37,7 @@ jobs:
           CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
         run: |
           echo "Changed workflow files:"
-          file_list = ""
+          final_file_list=""
           for file in $CHANGED_FILES; do
             echo "  - $file"
             final_file_list+="$file "  
