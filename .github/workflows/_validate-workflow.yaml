@@ -24,25 +24,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v6.2.0
-        with:
-          python-version: '3.13'
-
-      - name: Install yamllint
-        run: pip install --break-system-packages yamllint
-
-      - name: Lint workflow YAML files
-        run: |
-          yamllint -d '{
-            extends: default,
-            rules: {
-              line-length: {max: 200},
-              truthy: {allowed-values: ["true", "false", "on", "off"]},
-              comments: disable
-            }
-          }' ${{ inputs.paths }}
-
       - name: Get changed workflow files
         id: changed
         uses: tj-actions/changed-files@v46
@@ -51,19 +32,23 @@ jobs:
 
       - name: List changed files
         if: steps.changed.outputs.any_changed == 'true'
+        id: list_changed_files
         env:
           CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
         run: |
           echo "Changed workflow files:"
+          file_list = ""
           for file in $CHANGED_FILES; do
             echo "  - $file"
+            final_file_list+="$file "  
           done
+          echo "final_file_list=$final_file_list" >> $GITHUB_OUTPUT  
 
-      - name: Install python3-yaml
-        if: steps.changed.outputs.any_changed == 'true'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y python3-yaml
+      - name: yaml-lint
+        uses: ibiqlik/action-yamllint@v3.1.1
+        with:
+          file_or_dir: ${{ steps.list_changed_files.outputs.final_file_list }}
+          config_file: .yamllint.yml
 
       - name: Validate workflow_call inputs have descriptions
         if: steps.changed.outputs.any_changed == 'true'
