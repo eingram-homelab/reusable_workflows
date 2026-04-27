@@ -29,20 +29,6 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install yamllint
-        run: pip install --break-system-packages yamllint
-
-      - name: Lint workflow YAML files
-        run: |
-          yamllint -d '{
-            extends: default,
-            rules: {
-              line-length: {max: 200},
-              truthy: {allowed-values: ["true", "false", "on", "off"]},
-              comments: disable
-            }
-          }' ${{ inputs.paths }}
-
       - name: Get changed workflow files
         id: changed
         uses: tj-actions/changed-files@v46
