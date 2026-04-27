@@ -9,7 +9,7 @@ on:
 jobs:
   validate:
     name: Run Validation Checks
-    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.0
+    uses: ./.github/workflows/_validate-workflow.yaml
 
   gate:
     needs: validate
