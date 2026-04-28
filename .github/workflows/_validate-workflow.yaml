@@ -44,9 +44,9 @@ jobs:
           final_file_list=""
           for file in $CHANGED_FILES; do
             echo "  - $file"
-            final_file_list+="$file "  
+            final_file_list+="$file "
           done
-          echo "final_file_list=$final_file_list" >> $GITHUB_OUTPUT  
+          echo "final_file_list=$final_file_list" >> $GITHUB_OUTPUT
 
       - name: yaml-lint
         uses: eingram-homelab/reusable-workflows/.github/actions/yamllint@yamllint-v0.0.1
