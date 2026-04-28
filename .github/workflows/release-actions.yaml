@@ -29,7 +29,7 @@ jobs:
   validate:
     needs: changes
     if: needs.changes.outputs.changed == 'true'
-    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.0
+    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.2
     name: Run Validation Checks
     with:
       changed_files_patterns: |
