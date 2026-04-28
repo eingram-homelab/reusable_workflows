@@ -13,6 +13,10 @@ on:
         type: string
         default: |
           .github/workflows/**
+      yamllint_config:
+        description: 'Path to yamllint config file relative to the repository root'
+        type: string
+        default: ''
 
 jobs:
   validate:
@@ -45,10 +49,11 @@ jobs:
           echo "final_file_list=$final_file_list" >> $GITHUB_OUTPUT  
 
       - name: yaml-lint
-        uses: ibiqlik/action-yamllint@v3.1.1
+        uses: eingram-homelab/reusable-workflows/.github/actions/yamllint@yamllint-v0.0.1
+        if: steps.changed.outputs.any_changed == 'true'
         with:
           file_or_dir: ${{ steps.list_changed_files.outputs.final_file_list }}
-          config_file: .yamllint.yml
+          config_file: ${{ inputs.yamllint_config || '' }}
 
       - name: Validate workflow_call inputs have descriptions
         if: steps.changed.outputs.any_changed == 'true'
