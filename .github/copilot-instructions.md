@@ -17,7 +17,7 @@ Workflow files that do not start with an underscore are repository-local entrypo
 
 Current repository-local CI entrypoints:
 - `f-branch-validate.yaml` for advisory validation on feature branch pushes
-- `pr-validate.yaml` for merge-blocking validation on pull requests to `main`
+- `pr-workflow.yaml` for merge-blocking validation on pull requests to `main`
 - `release-reusable-workflows.yaml` for reusable workflow release tagging on pushes to `main`
 - `release-actions.yaml` for action release tagging on pushes to `main`
 - `sonarqube-smoke-test.yaml` for manual smoke testing of the reusable SonarQube workflow
@@ -31,11 +31,7 @@ This repository requires pull requests for merges to default branches. Do not as
 
 ## Required CI Pattern
 
-This repository has a required status check that the `gate` job must pass.
-
-Because of that, CI workflows in this repository should end with a final job named `gate`.
-
-The purpose of the `gate` job is to publish the final success or failure state after the real validation jobs complete. When updating or adding CI workflows, preserve this pattern so branch protection continues to work.
+This repository has a required status check that the `validate` job must pass.
 
 ## Expected CI Behavior
 
@@ -47,15 +43,11 @@ There should be a workflow that runs on pushes to feature branches and performs 
 
 That workflow is implemented in `f-branch-validate.yaml`.
 
-This is an advisory or soft check only. The workflow should still include a final `gate` job, but that `gate` job must always succeed even if validation fails.
-
 ### Pull Request Validation
 
 There should be a workflow that runs on any pull request targeting `main` and performs the same validation checks.
 
 That workflow is implemented in `pr-validate.yaml`.
-
-This workflow is merge-blocking. If validation fails, the workflow's final `gate` job must fail so the required status check prevents merge.
 
 ### Main Branch Release Tagging
 
@@ -88,7 +80,6 @@ The reusable SonarQube workflow lives in `_sonarqube-scan.yaml`. Use `sonarqube-
 When implementing CI changes in this repository:
 
 - Keep repository-local entrypoint workflows separate from reusable workflows.
-- Preserve the final `gate` job pattern in all CI workflows.
 - Treat feature branch validation as non-blocking.
 - Treat pull request validation to `main` as blocking.
 - Keep release tagging split by component type: reusable workflows in `release-reusable-workflows.yaml` and actions in `release-actions.yaml`.
