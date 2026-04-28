@@ -59,20 +59,3 @@ jobs:
           echo "Calculated bump: ${{ steps.tag_workflows.outputs.bump }}"
           echo "Created tags: ${{ steps.tag_workflows.outputs.created_tags || 'none' }}"
 
-  gate:
-    needs: [validate, tag]
-    if: always()
-    runs-on: arc-runners
-    steps:
-      - name: Check validation result
-        run: |
-          result="${{ needs.validate.result }}"
-          tag_result="${{ needs.tag.result }}"
-
-          if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
-            exit 1
-          fi
-
-          if [[ "$tag_result" == "failure" || "$tag_result" == "cancelled" ]]; then
-            exit 1
-          fi
