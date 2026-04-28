@@ -1,5 +1,5 @@
 ---
-name: Workflows/Actions Validation
+name: Workflows/Actions Validation 
 
 on:
   push:
