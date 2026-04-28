@@ -1,0 +1,67 @@
+---
+name: SonarQube Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or ref to scan. Defaults to the current branch.'
+        type: string
+        default: ''
+      project_base_dir:
+        description: 'Project base directory passed to the reusable SonarQube workflow'
+        type: string
+        default: '.'
+      sonar_properties_path:
+        description: 'Path to sonar-project.properties relative to the repository root'
+        type: string
+        default: 'sonar-project.properties'
+      scan_args:
+        description: 'Additional scanner arguments for one-off smoke tests'
+        type: string
+        default: ''
+
+jobs:
+  preflight:
+    name: Check smoke-test prerequisites
+    runs-on: arc-runners
+    steps:
+      - name: Verify required Sonar secret exists
+        env:
+          HAS_SONAR_TOKEN: ${{ secrets.SONAR_TOKEN != '' }}
+        run: |
+          if [[ "$HAS_SONAR_TOKEN" != "true" ]]; then
+            echo "SONAR_TOKEN is required to run the SonarQube smoke test." >&2
+            exit 1
+          fi
+
+  sonar:
+    name: Run SonarQube smoke test
+    needs: preflight
+    uses: ./.github/workflows/_sonarqube-scan.yaml
+    with:
+      ref: ${{ inputs.ref }}
+      project_base_dir: ${{ inputs.project_base_dir }}
+      sonar_properties_path: ${{ inputs.sonar_properties_path }}
+      scan_args: ${{ inputs.scan_args }}
+    secrets:
+      sonar_token: ${{ secrets.SONAR_TOKEN }}
+      sonar_host_url: ${{ secrets.SONAR_HOST_URL }}
+
+  gate:
+    needs: [preflight, sonar]
+    if: always()
+    runs-on: arc-runners
+    steps:
+      - name: Check smoke-test result
+        run: |
+          preflight_result="${{ needs.preflight.result }}"
+          sonar_result="${{ needs.sonar.result }}"
+
+          if [[ "$preflight_result" == "failure" || "$preflight_result" == "cancelled" ]]; then
+            exit 1
+          fi
+
+          if [[ "$sonar_result" == "failure" || "$sonar_result" == "cancelled" ]]; then
+            exit 1
+          fi
