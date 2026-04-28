@@ -4,6 +4,9 @@ name: Release Reusable Workflows
 on:
   push:
     branches: [main]
+    paths:
+      - .github/workflows/_*.yaml
+      - .github/workflows/_*.yml
 
 permissions:
   contents: write
@@ -30,7 +33,7 @@ jobs:
   validate:
     needs: changes
     if: needs.changes.outputs.changed == 'true'
-    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.2
+    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.2.0
     name: Run Validation Checks
     with:
       changed_files_patterns: |
