@@ -7,3 +7,6 @@ rules:
     level: warning
   trailing-spaces:
     level: warning
+  truthy:
+    check-keys: false
+  line-length: disable
