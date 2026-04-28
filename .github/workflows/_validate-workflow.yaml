@@ -49,7 +49,7 @@ jobs:
           echo "final_file_list=$final_file_list" >> $GITHUB_OUTPUT
 
       - name: yaml-lint
-        uses: eingram-homelab/reusable-workflows/.github/actions/yamllint@yamllint-v0.0.1
+        uses: eingram-homelab/reusable-workflows/.github/actions/yamllint@yamllint-v0.0.2
         if: steps.changed.outputs.any_changed == 'true'
         with:
           file_or_dir: ${{ steps.list_changed_files.outputs.final_file_list }}
