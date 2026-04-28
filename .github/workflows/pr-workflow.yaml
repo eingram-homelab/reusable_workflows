@@ -8,6 +8,7 @@ on:
 
 jobs:
   changes:
+    name: Check for workflow or action file changes
     runs-on: arc-runners
     outputs:
       workflows: ${{ steps.changed.outputs.any_changed }}
@@ -28,4 +29,3 @@ jobs:
     if: needs.changes.outputs.workflows == 'true'
     name: Run Validation Checks
     uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.0
-
