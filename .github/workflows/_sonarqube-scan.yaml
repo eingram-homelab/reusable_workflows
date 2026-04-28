@@ -1,0 +1,71 @@
+---
+name: SonarQube Scan
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Repository containing code or workflow content to scan'
+        type: string
+        default: ''
+      ref:
+        description: 'Branch or ref to check out. Defaults to the current ref.'
+        type: string
+        default: ''
+      project_base_dir:
+        description: 'Project base directory passed to the Sonar scanner'
+        type: string
+        default: '.'
+      sonar_properties_path:
+        description: 'Path to the sonar-project.properties file relative to the repository root'
+        type: string
+        default: 'sonar-project.properties'
+      fetch_depth:
+        description: 'Git fetch depth to use during checkout. Use 0 for full history.'
+        type: number
+        default: 0
+      scan_args:
+        description: 'Additional arguments passed to the Sonar scanner'
+        type: string
+        default: ''
+    secrets:
+      sonar_token:
+        description: 'SonarQube or SonarQube Cloud token used for authentication'
+        required: true
+      sonar_host_url:
+        description: 'Optional SonarQube Server URL. Leave unset for SonarQube Cloud.'
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  scan:
+    name: SonarQube Scan
+    runs-on: arc-runners
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.ref || github.head_ref || github.ref_name }}
+          fetch-depth: ${{ inputs.fetch_depth }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v5.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Run SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          projectBaseDir: ${{ inputs.project_base_dir }}
+          args: >-
+            -Dproject.settings=${{ inputs.sonar_properties_path }}
+            ${{ inputs.scan_args }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          SONAR_HOST_URL: ${{ secrets.sonar_host_url }}
