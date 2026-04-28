@@ -11,6 +11,7 @@ Reusable workflows start with an underscore in the filename.
 Examples:
 - `_validate-workflow.yaml`
 - `_terraform-lint.yaml`
+- `_sonarqube-scan.yaml`
 
 Workflow files that do not start with an underscore are repository-local entrypoint workflows for this repository's own CI behavior.
 
@@ -19,6 +20,7 @@ Current repository-local CI entrypoints:
 - `pr-validate.yaml` for merge-blocking validation on pull requests to `main`
 - `release-reusable-workflows.yaml` for reusable workflow release tagging on pushes to `main`
 - `release-actions.yaml` for action release tagging on pushes to `main`
+- `sonarqube-smoke-test.yaml` for manual smoke testing of the reusable SonarQube workflow
 
 Current reusable validation workflow:
 - `_validate-workflow.yaml` contains the shared validation logic used by the repository-local entrypoints
@@ -78,6 +80,8 @@ Reusable workflow release tagging applies only to files in `.github/workflows/` 
 Action release tagging applies to components under `.github/actions/`.
 
 The shared reusable validation logic for these entrypoints lives in `_validate-workflow.yaml`.
+
+The reusable SonarQube workflow lives in `_sonarqube-scan.yaml`. Use `sonarqube-smoke-test.yaml` as the fast manual validation path when changing that reusable workflow.
 
 ## Guidance For Agents
 
