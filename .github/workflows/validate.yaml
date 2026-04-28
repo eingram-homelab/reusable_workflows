@@ -1,5 +1,5 @@
 ---
-name: Pull Request Validation
+name: Workflows/Actions Validation
 
 on:
   pull_request:
@@ -29,14 +29,3 @@ jobs:
     name: Run Validation Checks
     uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.0
 
-  gate:
-    needs: [validate]
-    if: always()
-    runs-on: arc-runners
-    steps:
-      - name: Check validation result
-        run: |
-          result="${{ needs.validate.result }}"
-          if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
-            exit 1
-          fi

@@ -47,21 +47,3 @@ jobs:
     secrets:
       sonar_token: ${{ secrets.SONAR_TOKEN }}
       sonar_host_url: ${{ secrets.SONAR_HOST_URL }}
-
-  gate:
-    needs: [preflight, sonar]
-    if: always()
-    runs-on: arc-runners
-    steps:
-      - name: Check smoke-test result
-        run: |
-          preflight_result="${{ needs.preflight.result }}"
-          sonar_result="${{ needs.sonar.result }}"
-
-          if [[ "$preflight_result" == "failure" || "$preflight_result" == "cancelled" ]]; then
-            exit 1
-          fi
-
-          if [[ "$sonar_result" == "failure" || "$sonar_result" == "cancelled" ]]; then
-            exit 1
-          fi
