@@ -58,4 +58,3 @@ jobs:
         run: |
           echo "Calculated bump: ${{ steps.tag_workflows.outputs.bump }}"
           echo "Created tags: ${{ steps.tag_workflows.outputs.created_tags || 'none' }}"
-
