@@ -26,18 +26,10 @@ jobs:
           files: |
             .github/actions/**
 
-  validate:
+  tag:
+    name: Tag Changed Actions
     needs: changes
     if: needs.changes.outputs.changed == 'true'
-    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.1.2
-    name: Run Validation Checks
-    with:
-      changed_files_patterns: |
-        .github/actions/**
-
-  tag:
-    needs: [changes, validate]
-    if: needs.changes.outputs.changed == 'true' && needs.validate.result == 'success'
     runs-on: arc-runners
     steps:
       - uses: actions/checkout@v4
