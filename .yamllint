@@ -1,0 +1,8 @@
+# Place yamllint rules here
+
+extends: default
+  rules:
+    new-line-at-end-of-file:
+      level: warning
+    trailing-spaces:
+      level: warning
