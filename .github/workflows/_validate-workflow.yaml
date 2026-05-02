@@ -33,7 +33,7 @@ jobs:
 
       - name: Get changed workflow files
         id: changed
-        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@v47.0.6
         with:
           files: ${{ inputs.changed_files_patterns }}
 
