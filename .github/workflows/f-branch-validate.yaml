@@ -24,7 +24,7 @@ jobs:
 
       - name: Check for workflow file changes
         id: changed
-        uses: tj-actions/changed-files@v46.0.5
+        uses: tj-actions/changed-files@v47.0.6
         with:
           files: |
             .github/workflows/**/*.yaml
@@ -36,4 +36,5 @@ jobs:
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
     name: Run Validation Checks
-    uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.2.1
+    # uses: eingram-homelab/reusable-workflows/.github/workflows/_validate-workflow.yaml@validate-workflow-v0.2.1
+    uses: ./.github/workflows/_validate-workflow.yaml
