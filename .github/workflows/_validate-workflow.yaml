@@ -28,8 +28,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install nodejs and npm
-        run: sudo apt update && sudo apt install -y nodejs npm
+      - name: Install actionlint dependencies | nodejs npm pipx
+        run: sudo apt update && sudo apt install -y nodejs npm pipx
 
       - name: Get changed workflow files
         id: changed
