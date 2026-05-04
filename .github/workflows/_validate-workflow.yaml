@@ -52,11 +52,39 @@ jobs:
           echo "final_file_list_yamllint=$final_file_list" >> $GITHUB_ENV
 
       - name: yaml-lint
+        id: yamllint
         uses: eingram-homelab/reusable-workflows/.github/actions/yamllint@yamllint-v0.0.2
         if: steps.changed.outputs.any_changed == 'true'
+        continue-on-error: true
         with:
           file_or_dir: ${{ env.final_file_list_yamllint }}
           config_file: ${{ inputs.yamllint_config || '' }}
+
+      - name: yaml-lint Summary
+        if: ${{ always() && steps.changed.outputs.any_changed == 'true' && steps.yamllint.outcome != 'skipped' }}
+        run: |
+          {
+            echo "## yaml-lint"
+            echo
+
+            if [[ "${{ steps.yamllint.outcome }}" == "success" ]]; then
+              echo "No yaml-lint errors found."
+            else
+              echo "Found yaml-lint issues in changed workflow files."
+              echo
+              echo '```text'
+              if [[ -n "${{ steps.yamllint.outputs.logfile }}" && -f "${{ steps.yamllint.outputs.logfile }}" ]]; then
+                cat "${{ steps.yamllint.outputs.logfile }}"
+              else
+                echo "yamllint failed but no logfile was produced."
+              fi
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${{ steps.yamllint.outcome }}" != "success" ]]; then
+            exit 1
+          fi
 
       - name: Create list of changed files for actionlint (comma delimited)
         if: steps.changed.outputs.any_changed == 'true'
@@ -73,26 +101,32 @@ jobs:
           final_file_list=${final_file_list%,}  # Remove trailing comma
           echo "final_file_list_actionlint=$final_file_list" >> $GITHUB_ENV
 
+      - name: Update path for pipx-installed modules
+        run: echo "PATH=/home/runner/.local/bin:$PATH" >> $GITHUB_ENV
+
       - name: actionlint
+        if: steps.changed.outputs.any_changed == 'true'
         id: actionlint  #optional, id required only when outputs are used in the workflow steps later
         uses: raven-actions/actionlint@v2.1.2
         with:
           matcher: false  # optional
           cache: false  # optional
-          fail-on-error: true  # optional
+          fail-on-error: false  # optional
           files: ${{ env.final_file_list_actionlint }}
           flags: "-ignore SC2086"  # optional
 
       - name: actionlint Summary
         if: ${{ steps.actionlint.outputs.exit-code != 0 }}  # example usage, do echo only when actionlint action failed
         run: |
-          echo "Used actionlint version ${{ steps.actionlint.outputs.version-semver }}"
-          echo "Used actionlint release ${{ steps.actionlint.outputs.version-tag }}"
-          echo "actionlint ended with ${{ steps.actionlint.outputs.exit-code }} exit code"
-          echo "actionlint ended because '${{ steps.actionlint.outputs.exit-message }}'"
-          echo "actionlint found ${{ steps.actionlint.outputs.total-errors }} errors"
-          echo "actionlint checked ${{ steps.actionlint.outputs.total-files }} files"
-          echo "actionlint cache used: ${{ steps.actionlint.outputs.cache-hit }}"
+          {
+            echo "Used actionlint version ${{ steps.actionlint.outputs.version-semver }}"
+            echo "Used actionlint release ${{ steps.actionlint.outputs.version-tag }}"
+            echo "actionlint ended with ${{ steps.actionlint.outputs.exit-code }} exit code"
+            echo "actionlint ended because '${{ steps.actionlint.outputs.exit-message }}'"
+            echo "actionlint found ${{ steps.actionlint.outputs.total-errors }} errors"
+            echo "actionlint checked ${{ steps.actionlint.outputs.total-files }} files"
+            echo "actionlint cache used: ${{ steps.actionlint.outputs.cache-hit }}"
+          } >> "$GITHUB_STEP_SUMMARY"
           exit ${{ steps.actionlint.outputs.exit-code }}
 
       - name: Validate workflow_call inputs have descriptions
