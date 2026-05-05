@@ -49,7 +49,7 @@ jobs:
             echo "  - $file"
             final_file_list+="$file "
           done
-          echo "final_file_list_yamllint=$final_file_list" >> $GITHUB_ENV
+          echo "final_file_list_yamllint=$final_file_list" >> "$GITHUB_OUTPUT"
 
       - name: yaml-lint
         id: yamllint
@@ -57,7 +57,7 @@ jobs:
         if: steps.changed.outputs.any_changed == 'true'
         continue-on-error: true
         with:
-          file_or_dir: ${{ env.final_file_list_yamllint }}
+          file_or_dir: ${{ steps.list_changed_files_yamllint.outputs.final_file_list_yamllint }}
           config_file: ${{ inputs.yamllint_config || '' }}
 
       - name: yaml-lint Summary
@@ -99,10 +99,10 @@ jobs:
             final_file_list+="$file,"
           done
           final_file_list=${final_file_list%,}  # Remove trailing comma
-          echo "final_file_list_actionlint=$final_file_list" >> $GITHUB_ENV
+          echo "final_file_list_actionlint=$final_file_list" >> "$GITHUB_OUTPUT"
 
       - name: Update path for pipx-installed modules
-        run: echo "PATH=/home/runner/.local/bin:$PATH" >> $GITHUB_ENV
+        run: echo "PATH=/home/runner/.local/bin:$PATH" >> "$GITHUB_ENV"
 
       - name: actionlint
         if: steps.changed.outputs.any_changed == 'true'
@@ -112,8 +112,8 @@ jobs:
           matcher: false  # optional
           cache: false  # optional
           fail-on-error: false  # optional
-          files: ${{ env.final_file_list_actionlint }}
-          flags: "-ignore SC2086"  # optional
+          files: ${{ steps.list_changed_files_actionlint.outputs.final_file_list_actionlint }}
+          flags: -config-file .actionlint.yaml
 
       - name: actionlint Summary
         if: ${{ steps.actionlint.outputs.exit-code != 0 }}  # example usage, do echo only when actionlint action failed
@@ -127,7 +127,7 @@ jobs:
             echo "actionlint checked ${{ steps.actionlint.outputs.total-files }} files"
             echo "actionlint cache used: ${{ steps.actionlint.outputs.cache-hit }}"
           } >> "$GITHUB_STEP_SUMMARY"
-          exit ${{ steps.actionlint.outputs.exit-code }}
+          exit 1
 
       - name: Validate workflow_call inputs have descriptions
         if: steps.changed.outputs.any_changed == 'true'
@@ -140,8 +140,7 @@ jobs:
               echo "Checking $file..."
               # Warn if workflow_call inputs are missing descriptions
               if grep -qE '^  workflow_call' "$file"; then
-                python3 - "$file" <<'EOF'
-          import os
+                if ! python3 - "$file" <<'EOF'
           import sys
           import yaml
           from pathlib import Path
@@ -174,11 +173,11 @@ jobs:
               print(f"WARNING: {filepath}")
               for i in issues:
                   print(i)
-              Path("/var/tmp/validation_warnings.txt").touch()
+              sys.exit(1)
           EOF
-              if [[ $? -ne 0 ]] || [[ -f /var/tmp/validation_warnings.txt ]]; then
-                failed=1
-              fi
+                then
+                  failed=1
+                fi
               fi
             fi
           done
