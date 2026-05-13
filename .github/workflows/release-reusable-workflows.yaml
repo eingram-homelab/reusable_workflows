@@ -39,7 +39,7 @@ jobs:
 
       - name: Tag changed workflows
         id: tag_workflows
-        uses: eingram-homelab/reusable-workflows/.github/actions/reusable-workflow-semver-tag@reusable-workflow-semver-tag-v0.0.1
+        uses: ./.github/actions/reusable-workflow-semver-tag
         with:
           before_sha: ${{ github.event.before }}
           after_sha: ${{ github.sha }}
