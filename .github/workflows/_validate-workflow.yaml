@@ -28,9 +28,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install actionlint dependencies | nodejs npm pipx
-        run: sudo apt update && sudo apt install -y nodejs npm pipx
-
       - name: Get changed workflow files
         id: changed
         uses: tj-actions/changed-files@v47.0.6
@@ -100,9 +97,6 @@ jobs:
           done
           final_file_list=${final_file_list%,}  # Remove trailing comma
           echo "final_file_list_actionlint=$final_file_list" >> "$GITHUB_OUTPUT"
-
-      - name: Update path for pipx-installed modules
-        run: echo "PATH=/home/runner/.local/bin:$PATH" >> "$GITHUB_ENV"
 
       - name: actionlint
         if: steps.changed.outputs.any_changed == 'true'
