@@ -18,10 +18,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Act Workaround # https://github.com/nektos/act/issues/973
-        if: ${{ env.ACT }}
-        run: sudo apt update && sudo apt install -y nodejs npm
-
       - name: Check for workflow file changes
         id: changed
         uses: tj-actions/changed-files@v47.0.6
