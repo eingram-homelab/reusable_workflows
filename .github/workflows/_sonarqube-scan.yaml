@@ -39,7 +39,7 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
-
+      
       - name: test
         run: |
           echo "Running SonarQube scan on ref: ${{ inputs.ref || github.ref }}"
@@ -63,3 +63,4 @@ jobs:
         env:
           GITHUB_REF: ${{ inputs.ref || github.ref }}
           SONAR_TOKEN: ${{ secrets.sonar_token }}
+

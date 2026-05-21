@@ -4,6 +4,10 @@ name: SonarQube Smoke Test
 on:
   workflow_dispatch:
     inputs:
+      ref:
+        description: 'Branch or ref to scan. Defaults to the current branch.'
+        type: string
+        default: ''
       project_base_dir:
         description: 'Project base directory passed to the reusable SonarQube workflow'
         type: string
@@ -31,13 +35,15 @@ jobs:
             exit 1
           fi
 
-  sonarqube:
+  sonar:
     name: Run SonarQube smoke test
     needs: preflight
     uses: ./.github/workflows/_sonarqube-scan.yaml
     with:
+      ref: ${{ inputs.ref }}
       project_base_dir: ${{ inputs.project_base_dir }}
       sonar_properties_path: ${{ inputs.sonar_properties_path }}
       scan_args: ${{ inputs.scan_args }}
     secrets:
       sonar_token: ${{ secrets.SONAR_TOKEN }}
+      sonar_host_url: ${{ secrets.SONAR_HOST_URL }}
