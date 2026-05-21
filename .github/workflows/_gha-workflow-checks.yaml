@@ -1,0 +1,62 @@
+---
+name: GitHub Actions Workflow Checks
+
+on:
+  workflow_call:
+    inputs:
+      changed_files_patterns:
+        description: 'Newline-separated glob patterns passed to tj-actions/changed-files'
+        type: string
+        default: |
+          .github/workflows/**
+      yamllint_config:
+        description: 'Path to yamllint config file relative to the repository root'
+        type: string
+        default: ''
+      ref:
+        description: 'Branch or ref to check out. Defaults to the current ref.'
+        type: string
+        default: ''
+      project_base_dir:
+        description: 'Project base directory passed to the Sonar scanner'
+        type: string
+        default: '.'
+      sonar_properties_path:
+        description: 'Path to the sonar-project.properties file relative to the repository root'
+        type: string
+        default: 'sonar-project.properties'
+      fetch_depth:
+        description: 'Git fetch depth to use during checkout. Use 0 for full history.'
+        type: number
+        default: 0
+      scan_args:
+        description: 'Additional arguments passed to the Sonar scanner'
+        type: string
+        default: ''
+    secrets:
+      sonar_token:
+        description: 'SonarQube or SonarQube Cloud token used for authentication'
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Run Validation Checks
+    uses: ./.github/workflows/_validate-workflow.yaml
+    with:
+      changed_files_patterns: ${{ inputs.changed_files_patterns }}
+      yamllint_config: ${{ inputs.yamllint_config }}
+
+  sonarqube:
+    name: Run SonarQube Scan
+    uses: ./.github/workflows/_sonarqube-scan.yaml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
+      project_base_dir: ${{ inputs.project_base_dir }}
+      sonar_properties_path: ${{ inputs.sonar_properties_path }}
+      scan_args: ${{ inputs.scan_args }}
+    secrets:
+      sonar_token: ${{ secrets.sonar_token }}
