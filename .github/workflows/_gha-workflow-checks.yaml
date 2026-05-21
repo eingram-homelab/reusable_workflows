@@ -40,7 +40,7 @@ on:
     secrets:
       sonar_token:
         description: 'SonarQube or SonarQube Cloud token used for authentication'
-        required: true
+        required: false
 
 jobs:
   validate:
