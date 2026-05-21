@@ -21,6 +21,10 @@ on:
         type: string
         default: ''
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   preflight:
     name: Check smoke-test prerequisites
@@ -46,4 +50,3 @@ jobs:
       scan_args: ${{ inputs.scan_args }}
     secrets:
       sonar_token: ${{ secrets.SONAR_TOKEN }}
-      sonar_host_url: ${{ secrets.SONAR_HOST_URL }}

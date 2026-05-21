@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   changes:
     name: Check for workflow or action file changes
@@ -24,8 +28,10 @@ jobs:
             .github/actions/**/*.yaml
             .github/actions/**/*.yml
 
-  validate:
-    name: Run Validation Checks
+  gha-checks:
+    name: GitHub Actions Workflow Checks
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
-    uses: ./.github/workflows/_validate-workflow.yaml
+    uses: ./.github/workflows/_gha-workflow-checks.yaml
+    secrets:
+      sonar_token: ${{ secrets.SONAR_TOKEN }}
