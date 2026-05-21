@@ -46,4 +46,4 @@ jobs:
       scan_args: ${{ inputs.scan_args }}
     secrets:
       sonar_token: ${{ secrets.SONAR_TOKEN }}
-      sonar_host_url: ${{ secrets.SONAR_HOST_URL }}
+
