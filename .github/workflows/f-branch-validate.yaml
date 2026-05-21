@@ -33,3 +33,5 @@ jobs:
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
     uses: ./.github/workflows/_gha-workflow-checks.yaml
+    secrets:
+      sonar_token: ${{ secrets.SONAR_TOKEN }}
