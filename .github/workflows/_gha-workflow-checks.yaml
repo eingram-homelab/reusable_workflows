@@ -33,6 +33,10 @@ on:
         description: 'Additional arguments passed to the Sonar scanner'
         type: string
         default: ''
+      run_sonarqube_scan:
+        description: 'Whether to run the SonarQube scan after validation checks'
+        type: boolean
+        default: true
     secrets:
       sonar_token:
         description: 'SonarQube or SonarQube Cloud token used for authentication'
@@ -48,6 +52,7 @@ jobs:
 
   sonarqube:
     name: Run SonarQube Scan
+    if: inputs.run_sonarqube_scan == true
     uses: ./.github/workflows/_sonarqube-scan.yaml
     with:
       ref: ${{ inputs.ref || github.ref }}
