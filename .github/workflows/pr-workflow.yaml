@@ -7,15 +7,25 @@ on:
       - main
 
 jobs:
-  checks:
-    name: Run Repository Checks
-    uses: ./.github/workflows/_gha-workflow-checks.yaml
-    with:
-      ref: ${{ github.ref }}
-      changed_files_patterns: |
-        .github/workflows/**/*.yaml
-        .github/workflows/**/*.yml
-        .github/actions/**/*.yaml
-        .github/actions/**/*.yml
-    secrets:
-      sonar_token: ${{ secrets.SONAR_TOKEN }}
+  changes:
+    name: Check for workflow or action file changes
+    runs-on: arc-runners
+    outputs:
+      workflows: ${{ steps.changed.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for workflow file changes
+        id: changed
+        uses: tj-actions/changed-files@v46.0.5
+        with:
+          files: |
+            .github/workflows/**/*.yaml
+            .github/workflows/**/*.yml
+            .github/actions/**/*.yaml
+            .github/actions/**/*.yml
+
+  validate:
+    name: Run Validation Checks
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    uses: ./.github/workflows/_validate-workflow.yaml
